@@ -1,9 +1,32 @@
-pub mod consensus_service;
-pub mod blockchain_service;
-pub mod storage_service;
+// Services module for future microservice integration
+// Currently, all data is served from the JSON mock data file
 
-/// Service integrator trait for standardized service interaction
-pub trait ServiceIntegrator: Send + Sync {
-    /// Service health check
-    async fn health_check(&self) -> Result<bool, String>;
+pub struct ConsensusService {
+    pub service_url: Option<String>,
+}
+
+pub struct BlockchainService {
+    pub service_url: Option<String>,
+}
+
+pub struct StorageService {
+    pub service_url: Option<String>,
+}
+
+impl ConsensusService {
+    pub fn new(service_url: Option<String>) -> Self {
+        ConsensusService { service_url }
+    }
+}
+
+impl BlockchainService {
+    pub fn new(service_url: Option<String>) -> Self {
+        BlockchainService { service_url }
+    }
+}
+
+impl StorageService {
+    pub fn new(service_url: Option<String>) -> Self {
+        StorageService { service_url }
+    }
 }
