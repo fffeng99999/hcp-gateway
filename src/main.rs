@@ -107,10 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start server
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")
         .await
-        .map_err(|e| format!("Failed to bind to port 8080: {}", e))?
-        .into_std()
-        .map_err(|e| format!("Failed to convert listener: {}", e))?
-        .into();
+        .map_err(|e| format!("Failed to bind to port 8080: {}", e))?;
 
     tracing::info!("Server listening on http://127.0.0.1:8080");
 
