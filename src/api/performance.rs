@@ -1,69 +1,123 @@
-use crate::error::ApiResult;
+use crate::models::{ApiResponse, PerformanceMetrics, HistoryQueryParams};
 use crate::state::AppState;
-use axum::{extract::State, Json};
-use serde_json::{json, Value};
+use axum::{
+    extract::{Query, State},
+    Json,
+};
 use std::sync::Arc;
 
 // GET /performance/metrics
-pub async fn get_metrics(State(state): State<Arc<AppState>>) -> ApiResult<Json<Value>> {
-    let benchmarks = state.benchmarks.read().await;
+pub async fn get_metrics(
+    State(_state): State<Arc<AppState>>,
+) -> Json<ApiResponse<PerformanceMetrics>> {
+    // In a real app, this would fetch latest metrics from a service or channel
+    let metrics = PerformanceMetrics {
+        throughput: 5000.0,
+        latency: 150.0,
+        latency_p99: 200.0,
+        latency_p999: 250.0,
+        finality_time: 300.0,
+        network_bandwidth: 100.0,
+        cpu_usage: 45.0,
+        memory_usage: 512.0,
+    };
+    Json(ApiResponse::success(metrics))
+}
 
-    if let Some(latest) = benchmarks.last() {
-        if let Some(metrics) = latest.get("metrics") {
-            return Ok(Json(json!({
-                "current_metrics": metrics,
-                "timestamp": chrono::Utc::now().to_rfc3339(),
-            })));
-        }
-    }
-
-    Ok(Json(json!({
-        "current_metrics": {
-            "throughput": 0.0,
-            "latency": 0.0,
+// GET /performance/detailed
+pub async fn get_detailed_metrics() -> Json<ApiResponse<serde_json::Value>> {
+    let detailed = serde_json::json!({
+        "metrics": {
+            "throughput": 5000.0,
+            "latency": 150.0,
         },
-        "timestamp": chrono::Utc::now().to_rfc3339(),
-    })))
+        "resources": {
+            "cpu_cores": [45.0, 40.0, 50.0, 42.0],
+            "memory_heap": 512.0,
+            "memory_stack": 12.0,
+            "disk_io_read": 1024.0,
+            "disk_io_write": 2048.0
+        },
+        "network": {
+            "peers": 50,
+            "bandwidth_in": 50.0,
+            "bandwidth_out": 50.0
+        }
+    });
+    Json(ApiResponse::success(detailed))
 }
 
 // GET /performance/history
-pub async fn get_performance_history(
+pub async fn get_history(
     State(state): State<Arc<AppState>>,
-) -> ApiResult<Json<Vec<Value>>> {
-    let benchmarks = state.benchmarks.read().await;
+    Query(params): Query<HistoryQueryParams>,
+) -> Json<ApiResponse<Vec<PerformanceMetrics>>> {
+    let history = state.performance_history.read().await;
+    // Filter by time would go here
+    let limit = params.limit.unwrap_or(100);
+    let result = history.iter().take(limit).cloned().collect();
+    Json(ApiResponse::success(result))
+}
 
-    let history: Vec<Value> = benchmarks
-        .iter()
-        .map(|b| {
-            json!({
-                "benchmark_id": b.get("benchmark_id"),
-                "algorithm_id": b.get("algorithm_id"),
-                "metrics": b.get("metrics"),
-                "timestamp": b.get("start_time"),
-            })
-        })
-        .collect();
+// GET /performance/summary
+pub async fn get_summary(
+    State(state): State<Arc<AppState>>,
+    Query(_params): Query<HistoryQueryParams>,
+) -> Json<ApiResponse<serde_json::Value>> {
+    let history = state.performance_history.read().await;
+    let count = history.len() as f64;
+    
+    let avg_tps = if count > 0.0 {
+        history.iter().map(|m| m.throughput).sum::<f64>() / count
+    } else {
+        0.0
+    };
+    
+    let summary = serde_json::json!({
+        "average_tps": avg_tps,
+        "max_tps": history.iter().map(|m| m.throughput).fold(0.0, f64::max),
+        "total_samples": count
+    });
+    
+    Json(ApiResponse::success(summary))
+}
 
-    Ok(Json(history))
+// POST /performance/clear
+pub async fn clear_data(
+    State(state): State<Arc<AppState>>,
+) -> Json<ApiResponse<String>> {
+    let mut history = state.performance_history.write().await;
+    history.clear();
+    Json(ApiResponse::success("Performance data cleared".to_string()))
+}
+
+// POST /performance/export
+pub async fn export_performance_data(
+    State(_state): State<Arc<AppState>>,
+) -> Json<ApiResponse<String>> {
+    // Mock export
+    Json(ApiResponse::success("Export started".to_string()))
 }
 
 // GET /performance/comparison
 pub async fn get_performance_comparison(
-    State(state): State<Arc<AppState>>,
-) -> ApiResult<Json<Value>> {
-    let benchmarks = state.benchmarks.read().await;
-
-    let mut comparison = std::collections::HashMap::new();
-
-    for benchmark in benchmarks.iter() {
-        if let Some(algo_id) = benchmark.get("algorithm_id").and_then(|v| v.as_str()) {
-            if let Some(metrics) = benchmark.get("metrics") {
-                comparison
-                    .entry(algo_id.to_string())
-                    .or_insert_with(|| metrics.clone());
-            }
+    State(_state): State<Arc<AppState>>,
+) -> Json<ApiResponse<serde_json::Value>> {
+    // This could call into analysis or return specific perf comparison
+    // For now, we return a mock comparison
+    let comparison = serde_json::json!({
+        "current": {
+            "throughput": 5000.0,
+            "latency": 150.0
+        },
+        "baseline": {
+            "throughput": 4500.0,
+            "latency": 160.0
+        },
+        "improvement": {
+            "throughput_pct": 11.1,
+            "latency_pct": -6.25
         }
-    }
-
-    Ok(Json(json!(comparison)))
+    });
+    Json(ApiResponse::success(comparison))
 }

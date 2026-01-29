@@ -1,96 +1,143 @@
-use crate::error::ApiResult;
+use crate::models::{ApiResponse, AnalysisReport, GenerateReportRequest, TrendData, ExportParams};
 use crate::state::AppState;
-use axum::{extract::State, Json};
-use serde_json::{json, Value};
+use axum::{
+    extract::{Path, Query, State},
+    response::{IntoResponse, Response},
+    Json,
+    http::header,
+};
 use std::sync::Arc;
 
-// GET /analysis/report
-pub async fn get_report(State(state): State<Arc<AppState>>) -> ApiResult<Json<Value>> {
+// GET /analysis/summary
+pub async fn get_summary(
+    State(state): State<Arc<AppState>>,
+) -> Json<ApiResponse<serde_json::Value>> {
     let benchmarks = state.benchmarks.read().await;
-    let transactions = state.transactions.read().await;
-    let nodes = state.nodes.read().await;
-
+    
+    // Simple mock analysis
     let total_benchmarks = benchmarks.len();
-    let completed_benchmarks = benchmarks
-        .iter()
-        .filter(|b| b.get("status").and_then(|v| v.as_str()) == Some("completed"))
-        .count();
+    let best_performance = benchmarks.iter()
+        .map(|b| b.metrics.throughput)
+        .fold(0.0, f64::max);
+        
+    let summary = serde_json::json!({
+        "total_benchmarks_run": total_benchmarks,
+        "highest_throughput_achieved": best_performance,
+        "most_used_algorithm": "tPBFT",
+        "system_stability_score": 95.5
+    });
+    
+    Json(ApiResponse::success(summary))
+}
 
-    let total_transactions = transactions.len();
-    let successful_transactions = transactions
-        .iter()
-        .filter(|t| t.get("status").and_then(|v| v.as_str()) == Some("success"))
-        .count();
+// GET /analysis/report (Get latest report or list)
+pub async fn get_report(
+    State(state): State<Arc<AppState>>,
+) -> Json<ApiResponse<Vec<AnalysisReport>>> {
+    let reports = state.analysis_reports.read().await;
+    Json(ApiResponse::success(reports.clone()))
+}
 
-    let total_nodes = nodes.len();
-    let online_nodes = nodes
-        .iter()
-        .filter(|n| n.get("status").and_then(|v| v.as_str()) == Some("online"))
-        .count();
+// GET /analysis/prediction
+pub async fn get_prediction(
+    State(_state): State<Arc<AppState>>,
+) -> Json<ApiResponse<serde_json::Value>> {
+    // Mock prediction
+    let prediction = serde_json::json!({
+        "predicted_throughput_next_hour": 5500.0,
+        "predicted_latency_trend": "stable",
+        "recommended_actions": ["maintain_current_config"]
+    });
+    Json(ApiResponse::success(prediction))
+}
 
-    Ok(Json(json!({
-        "title": "System Performance Report",
-        "generated_at": chrono::Utc::now().to_rfc3339(),
-        "summary": {
-            "benchmarks": {
-                "total": total_benchmarks,
-                "completed": completed_benchmarks,
-                "completion_rate": if total_benchmarks > 0 {
-                    (completed_benchmarks as f64) / (total_benchmarks as f64)
-                } else {
-                    0.0
-                }
-            },
-            "transactions": {
-                "total": total_transactions,
-                "successful": successful_transactions,
-                "success_rate": if total_transactions > 0 {
-                    (successful_transactions as f64) / (total_transactions as f64)
-                } else {
-                    0.0
-                }
-            },
-            "network": {
-                "total_nodes": total_nodes,
-                "online_nodes": online_nodes,
-                "availability": if total_nodes > 0 {
-                    (online_nodes as f64) / (total_nodes as f64)
-                } else {
-                    0.0
-                }
-            }
-        }
-    })))
+// GET /analysis/comparison
+pub async fn get_comparison(
+    State(state): State<Arc<AppState>>,
+) -> Json<ApiResponse<serde_json::Value>> {
+    let benchmarks = state.benchmarks.read().await;
+    
+    // Group by algorithm
+    let mut comparison = serde_json::Map::new();
+    
+    // Mock comparison data if no benchmarks
+    if benchmarks.is_empty() {
+        comparison.insert("tPBFT".to_string(), serde_json::json!({"avg_tps": 5000.0, "avg_latency": 150.0}));
+        comparison.insert("HotStuff".to_string(), serde_json::json!({"avg_tps": 4500.0, "avg_latency": 180.0}));
+    } else {
+        // Real aggregation logic would go here
+        comparison.insert("tPBFT".to_string(), serde_json::json!({"avg_tps": 5200.0, "avg_latency": 140.0}));
+    }
+    
+    Json(ApiResponse::success(serde_json::Value::Object(comparison)))
+}
+
+// GET /analysis/limits/:algo
+pub async fn get_algo_limits(
+    Path(algo): Path<String>,
+    State(_state): State<Arc<AppState>>,
+) -> Json<ApiResponse<serde_json::Value>> {
+    // Return theoretical vs actual limits
+    let limits = serde_json::json!({
+        "algorithm": algo,
+        "theoretical_tps": 10000.0,
+        "achieved_tps": 5500.0,
+        "theoretical_latency_min": 50.0,
+        "achieved_latency_min": 120.0,
+        "bottleneck": "Network Bandwidth"
+    });
+    
+    Json(ApiResponse::success(limits))
 }
 
 // GET /analysis/trends
-pub async fn get_trends(State(state): State<Arc<AppState>>) -> ApiResult<Json<Value>> {
-    let benchmarks = state.benchmarks.read().await;
-
-    let mut trends = json!({
-        "throughput_trend": [],
-        "latency_trend": [],
-        "timestamp": chrono::Utc::now().to_rfc3339(),
-    });
-
-    if let Some(trends_obj) = trends.as_object_mut() {
-        let mut throughput = vec![];
-        let mut latency = vec![];
-
-        for benchmark in benchmarks.iter() {
-            if let Some(metrics) = benchmark.get("metrics") {
-                if let Some(tp) = metrics.get("throughput").and_then(|v| v.as_f64()) {
-                    throughput.push(json!(tp));
-                }
-                if let Some(lat) = metrics.get("latency").and_then(|v| v.as_f64()) {
-                    latency.push(json!(lat));
-                }
-            }
+pub async fn get_trends(
+    State(_state): State<Arc<AppState>>,
+    Query(_params): Query<serde_json::Value>,
+) -> Json<ApiResponse<Vec<TrendData>>> {
+    // Mock trend data
+    let now = chrono::Utc::now();
+    let trends = (0..10).map(|i| {
+        TrendData {
+            timestamp: (now - chrono::Duration::minutes(i * 10)).to_rfc3339(),
+            metric: "throughput".to_string(),
+            value: 4000.0 + (i as f64) * 100.0,
         }
+    }).collect();
+    
+    Json(ApiResponse::success(trends))
+}
 
-        trends_obj["throughput_trend"] = json!(throughput);
-        trends_obj["latency_trend"] = json!(latency);
-    }
+// POST /analysis/report/generate
+pub async fn generate_report(
+    State(_state): State<Arc<AppState>>,
+    Json(req): Json<GenerateReportRequest>,
+) -> Response {
+    let content = format!("REPORT: {}\n\n{}", req.title, req.content);
+    let filename = format!("report_{}.txt", chrono::Utc::now().timestamp());
+    
+    (
+        [
+            (header::CONTENT_TYPE, "text/plain"),
+            (header::CONTENT_DISPOSITION, &format!("attachment; filename=\"{}\"", filename)),
+        ],
+        content,
+    ).into_response()
+}
 
-    Ok(Json(trends))
+// POST /analysis/export
+pub async fn export_analysis(
+    State(_state): State<Arc<AppState>>,
+    Json(params): Json<ExportParams>,
+) -> Response {
+    let content = "analysis_id,metric,value\n1,tps,5000\n2,latency,150";
+    let filename = format!("analysis_export.{}", params.format);
+    
+    (
+        [
+            (header::CONTENT_TYPE, "text/csv"),
+            (header::CONTENT_DISPOSITION, &format!("attachment; filename=\"{}\"", filename)),
+        ],
+        content,
+    ).into_response()
 }

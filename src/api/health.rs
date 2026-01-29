@@ -1,9 +1,17 @@
+use crate::models::ApiResponse;
 use axum::Json;
-use serde_json::json;
+use serde::Serialize;
 
-pub async fn health_check() -> Json<serde_json::Value> {
-    Json(json!({
-        "status": "healthy",
-        "timestamp": chrono::Utc::now().to_rfc3339(),
-    }))
+#[derive(Serialize)]
+pub struct HealthStatus {
+    pub status: String,
+    pub version: String,
+}
+
+pub async fn health_check() -> Json<ApiResponse<HealthStatus>> {
+    let status = HealthStatus {
+        status: "healthy".to_string(),
+        version: "1.0.0".to_string(),
+    };
+    Json(ApiResponse::success(status))
 }
