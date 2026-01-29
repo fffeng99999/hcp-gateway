@@ -20,6 +20,7 @@ toml = "0.8"
 
 # Async utilities
 futures = "0.3"
+async-trait = "0.1"
 
 # Tracing and logging
 tracing = "0.1"
@@ -36,9 +37,6 @@ dotenv = "0.15"
 # UUID and time utilities
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-
-# Async trait
-async-trait = "0.1"
 
 # HTTP client
 reqwest = { version = "0.12", features = ["json"] }
