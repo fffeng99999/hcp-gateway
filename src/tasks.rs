@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Simple task executor for parallel task processing
-pub struct TaskExecutor<T> {
+pub struct TaskExecutor<T: Clone> {
     tasks: Arc<RwLock<HashMap<String, TaskStatus<T>>>>,
 }
 
@@ -15,7 +15,7 @@ pub enum TaskStatus<T> {
     Failed(String),
 }
 
-impl<T: Send + Sync + 'static> TaskExecutor<T> {
+impl<T: Send + Sync + Clone + 'static> TaskExecutor<T> {
     pub fn new() -> Self {
         TaskExecutor {
             tasks: Arc::new(RwLock::new(HashMap::new())),
@@ -52,7 +52,7 @@ impl<T: Send + Sync + 'static> TaskExecutor<T> {
     }
 }
 
-impl<T> Default for TaskExecutor<T> {
+impl<T: Clone> Default for TaskExecutor<T> {
     fn default() -> Self {
         Self::new()
     }
