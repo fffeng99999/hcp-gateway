@@ -1,71 +1,78 @@
-use axum::{
-    extract::{Path, State},
-    Json,
-};
-use crate::{
-    error::{ApiError, ApiResult},
-    models::*,
-    state::AppState,
-};
-use uuid::Uuid;
+use crate::error::{ApiError, ApiResult};
+use crate::state::AppState;
+use axum::{extract::Path, extract::State, Json};
+use serde_json::{json, Value};
+use std::sync::Arc;
 
+// POST /transaction/submit
 pub async fn submit_transaction(
-    State(state): State<AppState>,
-    Json(payload): Json<SubmitTransactionRequest>,
-) -> ApiResult<Json<serde_json::json!>> {
-    tracing::info!("Submitting transaction");
-    
-    let tx_id = Uuid::new_v4().to_string();
-    let transaction = Transaction {
-        id: tx_id.clone(),
-        status: "pending".to_string(),
-        timestamp: chrono::Utc::now().to_rfc3339(),
-        payload,
-        result: None,
-    };
-    
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<Value>,
+) -> ApiResult<Json<Value>> {
+    let tx_id = format!("tx_{}", uuid::Uuid::new_v4().to_string()[..8].to_uppercase());
     let mut transactions = state.transactions.write().await;
-    transactions.insert(tx_id.clone(), transaction);
-    
-    Ok(Json(serde_json::json!({
+
+    let transaction = json!({
+        "id": tx_id,
+        "status": "pending",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "payload": payload,
+    });
+
+    transactions.push(transaction.clone());
+
+    Ok(Json(json!({
         "tx_id": tx_id,
         "status": "submitted",
     })))
 }
 
+// GET /transaction/:id
 pub async fn get_transaction(
-    State(state): State<AppState>,
-    Path(tx_id): Path<String>,
-) -> ApiResult<Json<Transaction>> {
-    tracing::info!("Getting transaction: {}", tx_id);
-    
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> ApiResult<Json<Value>> {
     let transactions = state.transactions.read().await;
     transactions
-        .get(&tx_id)
+        .iter()
+        .find(|t| t.get("id").and_then(|v| v.as_str()) == Some(&id))
         .cloned()
         .map(Json)
-        .ok_or_else(|| ApiError::NotFound(format!("Transaction {} not found", tx_id)))
+        .ok_or_else(|| ApiError::NotFound(format!("Transaction {} not found", id)))
 }
 
+// GET /transaction/status
 pub async fn get_transaction_status(
-    State(state): State<AppState>,
-) -> ApiResult<Json<Vec<Transaction>>> {
-    tracing::info!("Getting transaction status");
-    
+    State(state): State<Arc<AppState>>,
+) -> ApiResult<Json<Value>> {
     let transactions = state.transactions.read().await;
-    let txs: Vec<Transaction> = transactions.values().cloned().collect();
-    
-    Ok(Json(txs))
+
+    let total = transactions.len();
+    let success = transactions
+        .iter()
+        .filter(|t| t.get("status").and_then(|v| v.as_str()) == Some("success"))
+        .count();
+    let pending = transactions
+        .iter()
+        .filter(|t| t.get("status").and_then(|v| v.as_str()) == Some("pending"))
+        .count();
+
+    Ok(Json(json!({
+        "total": total,
+        "success": success,
+        "pending": pending,
+        "success_rate": if total > 0 {
+            (success as f64) / (total as f64)
+        } else {
+            0.0
+        },
+    })))
 }
 
+// GET /transaction/history
 pub async fn get_transaction_history(
-    State(state): State<AppState>,
-) -> ApiResult<Json<Vec<Transaction>>> {
-    tracing::info!("Getting transaction history");
-    
+    State(state): State<Arc<AppState>>,
+) -> ApiResult<Json<Vec<Value>>> {
     let transactions = state.transactions.read().await;
-    let mut txs: Vec<Transaction> = transactions.values().cloned().collect();
-    txs.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
-    
-    Ok(Json(txs))
+    Ok(Json(transactions.clone()))
 }
