@@ -1,67 +1,96 @@
-use axum::{
-    extract::State,
-    Json,
-};
-use crate::{
-    error::ApiResult,
-    models::*,
-    state::AppState,
-};
+use crate::error::ApiResult;
+use crate::state::AppState;
+use axum::{extract::State, Json};
+use serde_json::{json, Value};
+use std::sync::Arc;
 
-pub async fn get_report(
-    State(state): State<AppState>,
-) -> ApiResult<Json<AnalysisReport>> {
-    tracing::info!("Generating analysis report");
-    
+// GET /analysis/report
+pub async fn get_report(State(state): State<Arc<AppState>>) -> ApiResult<Json<Value>> {
     let benchmarks = state.benchmarks.read().await;
+    let transactions = state.transactions.read().await;
+    let nodes = state.nodes.read().await;
+
     let total_benchmarks = benchmarks.len();
-    
-    // Calculate summary statistics
-    let avg_throughput: f64 = if !benchmarks.is_empty() {
-        benchmarks.values().map(|b| b.metrics.throughput).sum::<f64>() / total_benchmarks as f64
-    } else {
-        0.0
-    };
-    
-    let avg_latency: f64 = if !benchmarks.is_empty() {
-        benchmarks.values().map(|b| b.metrics.latency).sum::<f64>() / total_benchmarks as f64
-    } else {
-        0.0
-    };
-    
-    let report = AnalysisReport {
-        report_id: uuid::Uuid::new_v4().to_string(),
-        created_at: chrono::Utc::now().to_rfc3339(),
-        title: "HCP Performance Analysis Report".to_string(),
-        summary: format!(
-            "Analyzed {} benchmarks with average throughput of {:.2} TPS and average latency of {:.2}ms",
-            total_benchmarks, avg_throughput, avg_latency
-        ),
-        recommendations: vec![
-            "Consider using tPBFT for scenarios requiring high throughput".to_string(),
-            "Leios protocol shows promise for low-latency requirements".to_string(),
-            "Network optimization can significantly improve consensus performance".to_string(),
-        ],
-    };
-    
-    Ok(Json(report))
+    let completed_benchmarks = benchmarks
+        .iter()
+        .filter(|b| b.get("status").and_then(|v| v.as_str()) == Some("completed"))
+        .count();
+
+    let total_transactions = transactions.len();
+    let successful_transactions = transactions
+        .iter()
+        .filter(|t| t.get("status").and_then(|v| v.as_str()) == Some("success"))
+        .count();
+
+    let total_nodes = nodes.len();
+    let online_nodes = nodes
+        .iter()
+        .filter(|n| n.get("status").and_then(|v| v.as_str()) == Some("online"))
+        .count();
+
+    Ok(Json(json!({
+        "title": "System Performance Report",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "summary": {
+            "benchmarks": {
+                "total": total_benchmarks,
+                "completed": completed_benchmarks,
+                "completion_rate": if total_benchmarks > 0 {
+                    (completed_benchmarks as f64) / (total_benchmarks as f64)
+                } else {
+                    0.0
+                }
+            },
+            "transactions": {
+                "total": total_transactions,
+                "successful": successful_transactions,
+                "success_rate": if total_transactions > 0 {
+                    (successful_transactions as f64) / (total_transactions as f64)
+                } else {
+                    0.0
+                }
+            },
+            "network": {
+                "total_nodes": total_nodes,
+                "online_nodes": online_nodes,
+                "availability": if total_nodes > 0 {
+                    (online_nodes as f64) / (total_nodes as f64)
+                } else {
+                    0.0
+                }
+            }
+        }
+    })))
 }
 
-pub async fn get_trends(
-    State(state): State<AppState>,
-) -> ApiResult<Json<Vec<TrendData>>> {
-    tracing::info!("Getting performance trends");
-    
+// GET /analysis/trends
+pub async fn get_trends(State(state): State<Arc<AppState>>) -> ApiResult<Json<Value>> {
     let benchmarks = state.benchmarks.read().await;
-    let trends: Vec<TrendData> = benchmarks
-        .values()
-        .map(|b| TrendData {
-            timestamp: b.start_time.clone(),
-            algorithm: b.algorithm_id.clone(),
-            throughput: b.metrics.throughput,
-            latency: b.metrics.latency,
-        })
-        .collect();
-    
+
+    let mut trends = json!({
+        "throughput_trend": [],
+        "latency_trend": [],
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+    });
+
+    if let Some(trends_obj) = trends.as_object_mut() {
+        let mut throughput = vec![];
+        let mut latency = vec![];
+
+        for benchmark in benchmarks.iter() {
+            if let Some(metrics) = benchmark.get("metrics") {
+                if let Some(tp) = metrics.get("throughput").and_then(|v| v.as_f64()) {
+                    throughput.push(json!(tp));
+                }
+                if let Some(lat) = metrics.get("latency").and_then(|v| v.as_f64()) {
+                    latency.push(json!(lat));
+                }
+            }
+        }
+
+        trends_obj["throughput_trend"] = json!(throughput);
+        trends_obj["latency_trend"] = json!(latency);
+    }
+
     Ok(Json(trends))
 }
