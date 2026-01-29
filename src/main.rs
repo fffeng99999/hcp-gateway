@@ -108,7 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")
         .await
         .map_err(|e| format!("Failed to bind to port 8080: {}", e))?
-        .try_into_std()
+        .into_std()
         .map_err(|e| format!("Failed to convert listener: {}", e))?
         .into();
 
@@ -116,8 +116,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     axum::serve(listener, app)
         .await
-        .map_err(|e| format!("Server error: {}", e))?
-        .into();
+        .map_err(|e| format!("Server error: {}", e))?;
 
     Ok(())
 }
