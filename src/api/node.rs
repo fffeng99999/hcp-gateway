@@ -1,58 +1,60 @@
-use axum::{
-    extract::{Path, State},
-    Json,
-};
-use crate::{
-    error::{ApiError, ApiResult},
-    models::*,
-    state::AppState,
-};
+use crate::error::{ApiError, ApiResult};
+use crate::state::AppState;
+use axum::{extract::Path, extract::State, Json};
+use serde_json::{json, Value};
+use std::sync::Arc;
 
-pub async fn list_nodes(
-    State(state): State<AppState>,
-) -> ApiResult<Json<Vec<Node>>> {
-    tracing::info!("Listing all nodes");
-    
+// GET /node/list
+pub async fn list_nodes(State(state): State<Arc<AppState>>) -> ApiResult<Json<Vec<Value>>> {
     let nodes = state.nodes.read().await;
-    let node_list: Vec<Node> = nodes.values().cloned().collect();
-    
-    Ok(Json(node_list))
+    Ok(Json(nodes.clone()))
 }
 
+// GET /node/:id
 pub async fn get_node(
-    State(state): State<AppState>,
-    Path(node_id): Path<String>,
-) -> ApiResult<Json<Node>> {
-    tracing::info!("Getting node: {}", node_id);
-    
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> ApiResult<Json<Value>> {
     let nodes = state.nodes.read().await;
     nodes
-        .get(&node_id)
+        .iter()
+        .find(|n| n.get("id").and_then(|v| v.as_str()) == Some(&id))
         .cloned()
         .map(Json)
-        .ok_or_else(|| ApiError::NotFound(format!("Node {} not found", node_id)))
+        .ok_or_else(|| ApiError::NotFound(format!("Node {} not found", id)))
 }
 
-pub async fn get_node_stats(
-    State(state): State<AppState>,
-) -> ApiResult<Json<NodeStats>> {
-    tracing::info!("Getting node statistics");
-    
+// GET /node/stats
+pub async fn get_node_stats(State(state): State<Arc<AppState>>) -> ApiResult<Json<Value>> {
     let nodes = state.nodes.read().await;
-    let total_count = nodes.len() as u32;
-    let online_count = nodes
-        .values()
-        .filter(|n| n.status == "online")
-        .count() as u32;
-    let offline_count = total_count - online_count;
-    
-    let stats = NodeStats {
-        node_id: "cluster".to_string(),
-        online_count,
-        offline_count,
-        total_count,
-        average_latency: 50.0,
-    };
-    
-    Ok(Json(stats))
+
+    let total = nodes.len();
+    let online = nodes
+        .iter()
+        .filter(|n| n.get("status").and_then(|v| v.as_str()) == Some("online"))
+        .count();
+    let offline = total - online;
+
+    let leaders = nodes
+        .iter()
+        .filter(|n| n.get("role").and_then(|v| v.as_str()) == Some("leader"))
+        .count();
+
+    let validators = nodes
+        .iter()
+        .filter(|n| n.get("role").and_then(|v| v.as_str()) == Some("validator"))
+        .count();
+
+    Ok(Json(json!({
+        "total_nodes": total,
+        "online_nodes": online,
+        "offline_nodes": offline,
+        "leaders": leaders,
+        "validators": validators,
+        "availability": if total > 0 {
+            (online as f64) / (total as f64)
+        } else {
+            0.0
+        },
+    })))
 }
