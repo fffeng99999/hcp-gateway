@@ -1,10 +1,13 @@
 use crate::models::{ApiResponse, PerformanceMetrics, HistoryQueryParams};
 use crate::state::AppState;
 use axum::{
-    extract::{Query, State},
+    extract::{Query, State, ws::{WebSocketUpgrade, WebSocket, Message}},
     Json,
+    response::IntoResponse,
 };
 use std::sync::Arc;
+use tokio::time::Duration;
+use rand::Rng;
 
 // GET /performance/metrics
 pub async fn get_metrics(
@@ -120,4 +123,43 @@ pub async fn get_performance_comparison(
         }
     });
     Json(ApiResponse::success(comparison))
+}
+
+// WebSocket Handler
+pub async fn ws_handler(
+    ws: WebSocketUpgrade,
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    ws.on_upgrade(|socket| handle_socket(socket, state))
+}
+
+async fn handle_socket(mut socket: WebSocket, _state: Arc<AppState>) {
+    let mut interval = tokio::time::interval(Duration::from_secs(1));
+    
+    loop {
+        interval.tick().await;
+        
+        // Generate mock metrics
+        let msg = {
+            let mut rng = rand::thread_rng();
+            let metrics = PerformanceMetrics {
+                throughput: rng.gen_range(4000.0..6000.0),
+                latency: rng.gen_range(100.0..200.0),
+                latency_p99: rng.gen_range(150.0..250.0),
+                latency_p999: rng.gen_range(200.0..300.0),
+                finality_time: rng.gen_range(250.0..350.0),
+                network_bandwidth: rng.gen_range(50.0..150.0),
+                cpu_usage: rng.gen_range(30.0..60.0),
+                memory_usage: rng.gen_range(400.0..800.0),
+            };
+            serde_json::to_string(&metrics)
+        };
+        
+        if let Ok(msg) = msg {
+            if socket.send(Message::Text(msg)).await.is_err() {
+                // Client disconnected
+                break;
+            }
+        }
+    }
 }

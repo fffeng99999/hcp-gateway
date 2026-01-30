@@ -264,6 +264,8 @@ impl AppState {
                 role: "admin".to_string(),
                 email: "admin@hcp.com".to_string(),
                 created_at: chrono::Utc::now().to_rfc3339(),
+                status: "active".to_string(),
+                last_login: None,
             },
         ]
     }

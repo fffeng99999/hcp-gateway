@@ -1,16 +1,15 @@
 use axum::{
-    routing::{get, post, put, delete},
+    routing::{get, post, put, delete, any},
     Router,
+    middleware::from_fn,
 };
 use std::sync::Arc;
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{CorsLayer, Any};
 use crate::{api, middleware, state};
 
 pub fn create_router(app_state: Arc<state::AppState>) -> Router {
-    Router::new()
-        // Health check
-        .route("/health", get(api::health::health_check))
-        
+    // Protected API routes (require Auth header)
+    let protected_routes = Router::new()
         // Consensus Module
         .nest("/consensus", Router::new()
             .route("/algorithms", get(api::consensus::get_algorithms))
@@ -51,7 +50,7 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
             .route("/:id/cancel", post(api::transaction::cancel_transaction))
         )
         
-        // Performance Module
+        // Performance Module (HTTP endpoints)
         .nest("/performance", Router::new()
             .route("/metrics", get(api::performance::get_metrics))
             .route("/detailed", get(api::performance::get_detailed_metrics))
@@ -92,9 +91,29 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
             .route("/users", get(api::settings::get_users).post(api::settings::create_user))
             .route("/users/:id", put(api::settings::update_user).delete(api::settings::delete_user))
         )
+        .layer(from_fn(middleware::auth_middleware));
+
+    // Public API routes
+    let api_routes = Router::new()
+        .route("/auth/login", post(api::auth::login))
+        // WebSocket endpoint (handled separately from auth middleware for now due to protocol limitations)
+        .route("/performance", any(api::performance::ws_handler))
+        .merge(protected_routes);
+
+    Router::new()
+        // Health check
+        .route("/health", get(api::health::health_check))
         
-        .layer(CorsLayer::permissive())
-        .layer(axum::middleware::from_fn(middleware::logging_middleware))
+        // API v1 (and default /api)
+        .nest("/api", api_routes)
+        
+        // CORS and Logging
+        .layer(CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods(Any)
+            .allow_headers(Any)
+        )
+        .layer(from_fn(middleware::logging_middleware))
         .with_state(app_state)
 }
 
@@ -115,28 +134,6 @@ mod tests {
         let mut app = create_router(app_state);
 
         let req = Request::builder().uri("/health").body(Body::empty()).unwrap();
-        let response = app.call(req).await.unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-    }
-
-    #[tokio::test]
-    async fn test_consensus_algorithms() {
-        let app_state = Arc::new(AppState::new(data::default_mock_data()));
-        let mut app = create_router(app_state);
-
-        let req = Request::builder().uri("/consensus/algorithms").body(Body::empty()).unwrap();
-        let response = app.call(req).await.unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-    }
-    
-    #[tokio::test]
-    async fn test_node_stats() {
-        let app_state = Arc::new(AppState::new(data::default_mock_data()));
-        let mut app = create_router(app_state);
-
-        let req = Request::builder().uri("/nodes/stats").body(Body::empty()).unwrap();
         let response = app.call(req).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);

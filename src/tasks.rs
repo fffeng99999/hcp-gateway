@@ -4,10 +4,12 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Simple task executor for parallel task processing
+#[allow(dead_code)]
 pub struct TaskExecutor<T: Clone> {
     tasks: Arc<RwLock<HashMap<String, TaskStatus<T>>>>,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub enum TaskStatus<T: Clone> {
     Running,
@@ -15,6 +17,7 @@ pub enum TaskStatus<T: Clone> {
     Failed(String),
 }
 
+#[allow(dead_code)]
 impl<T: Clone + Send + Sync + 'static> TaskExecutor<T> {
     pub fn new() -> Self {
         TaskExecutor {

@@ -8,6 +8,8 @@ mod api;
 mod services;
 mod data;
 mod router;
+mod auth;
+mod extractors;
 
 use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
@@ -34,15 +36,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize application state (mock data included)
     let app_state = Arc::new(state::AppState::new(mock_data));
 
+    // Load configuration
+    let config = config::Config::default();
+
     // Build router
     let app = router::create_router(app_state);
 
     // Start server
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")
+    let addr = format!("{}:{}", config.server_addr, config.server_port);
+    let listener = tokio::net::TcpListener::bind(&addr)
         .await
-        .map_err(|e| format!("Failed to bind to port 8080: {}", e))?;
+        .map_err(|e| format!("Failed to bind to {}: {}", addr, e))?;
 
-    tracing::info!("Server listening on http://127.0.0.1:8080");
+    tracing::info!("Server listening on http://{}", addr);
 
     axum::serve(listener, app)
         .await

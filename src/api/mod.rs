@@ -7,3 +7,4 @@ pub mod analysis;
 pub mod anti_manipulation;
 pub mod benchmark;
 pub mod settings;
+pub mod auth;

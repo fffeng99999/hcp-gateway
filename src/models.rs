@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use validator::Validate;
 
 // ============== Generic Response Wrapper ==============
 
@@ -32,6 +33,29 @@ impl<T> ApiResponse<T> {
     }
 }
 
+// ============== Auth Models ==============
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Claims {
+    pub sub: String,
+    pub role: String,
+    pub exp: usize,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct LoginRequest {
+    #[validate(length(min = 3, message = "Username too short"))]
+    pub username: String,
+    #[validate(length(min = 6, message = "Password too short"))]
+    pub password: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LoginResponse {
+    pub token: String,
+    pub user: SystemUser,
+}
+
 // ============== Consensus Models ==============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,18 +74,21 @@ pub struct ConsensusConfig {
     pub last_updated: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct SelectAlgorithmRequest {
     #[serde(rename = "algorithmId")]
+    #[validate(length(min = 1))]
     pub algorithm_id: String,
     pub parameters: HashMap<String, serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct UpdateParametersRequest {
     #[serde(rename = "algorithmId")]
+    #[validate(length(min = 1))]
     pub algorithm_id: String,
     #[serde(rename = "paramName")]
+    #[validate(length(min = 1))]
     pub param_name: String,
     pub value: serde_json::Value,
 }
@@ -78,8 +105,9 @@ pub struct BenchmarkConfig {
     pub fault_injection_config: Option<FaultInjectionConfig>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct CreateBenchmarkParams {
+    #[validate(length(min = 1))]
     pub name: String,
     pub config: BenchmarkConfig,
 }
@@ -123,9 +151,11 @@ pub struct NodeStats {
     pub average_latency: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct NodeRegistrationRequest {
+    #[validate(length(min = 1))]
     pub name: String,
+    #[validate(url)]
     pub address: String,
     pub role: String,
     pub public_key: String,
@@ -145,15 +175,17 @@ pub struct PerformanceMetrics {
     pub memory_usage: f64,    // MB
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct ExportParams {
+    #[validate(length(min = 1))]
     pub format: String, // csv, json, excel
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct HistoryQueryParams {
     pub start_time: Option<String>,
     pub end_time: Option<String>,
+    #[validate(range(min = 1, max = 1000))]
     pub limit: Option<usize>,
 }
 
@@ -170,19 +202,23 @@ pub struct Transaction {
     pub block_height: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct TransactionSubmitRequest {
     pub payload: serde_json::Value, // Flexible payload
+    #[validate(range(min = 1, max = 10000))]
     pub rate_limit: Option<u32>,
+    #[validate(range(min = 1, max = 1000))]
     pub batch_size: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct TransactionQueryParams {
     pub status: Option<String>,
     pub from: Option<String>,
     pub to: Option<String>,
+    #[validate(range(min = 1, max = 100))]
     pub limit: Option<usize>,
+    #[validate(range(min = 0))]
     pub offset: Option<usize>,
 }
 
@@ -214,10 +250,12 @@ pub struct AnalysisReport {
     pub recommendations: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct GenerateReportRequest {
+    #[validate(length(min = 1))]
     pub title: String,
     pub content: String,
+    #[validate(length(min = 1))]
     pub format: String, // pdf, docx
 }
 
@@ -278,6 +316,8 @@ pub struct SystemUser {
     pub role: String, // admin, viewer
     pub email: String,
     pub created_at: String,
+    pub status: String,
+    pub last_login: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
