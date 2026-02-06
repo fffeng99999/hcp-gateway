@@ -1,7 +1,7 @@
 use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
 use chrono::{Utc, Duration};
 use crate::models::{Claims, SystemUser};
-use crate::error::AppError;
+use crate::common::error::AppError;
 
 const JWT_SECRET: &[u8] = b"hcp_secret_key_change_me";
 

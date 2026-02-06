@@ -31,25 +31,25 @@ pub async fn load_mock_data<P: AsRef<Path>>(
     let algorithms = data
         .get("algorithms")
         .and_then(|v| v.as_array())
-        .map(|v| v.clone())
+        .cloned()
         .unwrap_or_default();
 
     let benchmarks = data
         .get("benchmarks")
         .and_then(|v| v.as_array())
-        .map(|v| v.clone())
+        .cloned()
         .unwrap_or_default();
 
     let transactions = data
         .get("transactions")
         .and_then(|v| v.as_array())
-        .map(|v| v.clone())
+        .cloned()
         .unwrap_or_default();
 
     let nodes = data
         .get("nodes")
         .and_then(|v| v.as_array())
-        .map(|v| v.clone())
+        .cloned()
         .unwrap_or_default();
 
     let consensus_config = data

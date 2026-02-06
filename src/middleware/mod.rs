@@ -4,7 +4,7 @@ use axum::{
     response::Response,
     http::{header, StatusCode},
 };
-use crate::auth::verify_token;
+use crate::utils::auth::verify_token;
 
 pub async fn logging_middleware(request: Request, next: Next) -> Response {
     let method = request.method().clone();

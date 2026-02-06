@@ -1,5 +1,5 @@
 use crate::models::{ApiResponse, AnalysisReport, GenerateReportRequest, TrendData, ExportParams};
-use crate::state::AppState;
+use crate::common::state::AppState;
 use axum::{
     extract::{Path, Query, State},
     response::{IntoResponse, Response},

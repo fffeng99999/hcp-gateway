@@ -2,9 +2,9 @@ use crate::models::{
     ApiResponse, ConsensusAlgorithm, ConsensusConfig, SelectAlgorithmRequest, 
     UpdateParametersRequest
 };
-use crate::state::AppState;
-use crate::error::{AppError, AppResult};
-use crate::extractors::ValidatedJson;
+use crate::common::state::AppState;
+use crate::common::error::{AppError, AppResult};
+use crate::api::extractors::ValidatedJson;
 use axum::{
     extract::State,
     Json,

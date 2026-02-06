@@ -9,3 +9,5 @@ pub mod benchmark;
 pub mod settings;
 pub mod auth;
 pub mod block;
+pub mod router;
+pub mod extractors;

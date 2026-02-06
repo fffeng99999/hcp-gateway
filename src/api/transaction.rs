@@ -1,5 +1,5 @@
 use crate::models::{ApiResponse, Transaction, TransactionSubmitRequest, TransactionQueryParams};
-use crate::state::AppState;
+use crate::common::state::AppState;
 use axum::{
     extract::{Path, Query, State},
     Json,
@@ -21,7 +21,7 @@ pub async fn submit_transaction(
         let amount = payload.get("amount").and_then(|v| v.as_i64()).unwrap_or(0);
         let benchmark_id = payload.get("benchmark_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
-        let proto_req = crate::grpc_client::transaction::CreateTransactionRequest {
+        let proto_req = crate::services::consensus_client::transaction::CreateTransactionRequest {
             from_address: from,
             to_address: to,
             amount,

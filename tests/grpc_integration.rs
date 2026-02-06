@@ -1,4 +1,5 @@
-use hcp_gateway::grpc_client::ConsensusClient;
+use hcp_gateway::services::consensus_client::ConsensusClient;
+use hcp_gateway::services::consensus_client::transaction::CreateTransactionRequest;
 use std::process::Command;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -52,7 +53,7 @@ async fn test_grpc_integration() {
         let _ = Command::new("docker").args(&["rm", "-f", "hcp-server-test"]).status();
         panic!("Failed to connect to hcp-server");
     }
-    let client = client.unwrap();
+    let client: ConsensusClient = client.unwrap();
 
     // 3. Concurrent Load Test (submit_transaction)
     println!("Testing submit_transaction with 100 concurrency...");
@@ -63,13 +64,13 @@ async fn test_grpc_integration() {
         set.spawn(async move {
             let start_req = std::time::Instant::now();
             // Call submit
-            let req = hcp_gateway::grpc_client::transaction::CreateTransactionRequest {
+            let req = CreateTransactionRequest {
                 from_address: format!("user{}", i),
                 to_address: "dest".to_string(),
                 amount: 100,
                 benchmark_id: "".to_string(),
             };
-            let res = c.submit_transaction(req).await;
+            let res: Result<_, _> = c.submit_transaction(req).await;
             let duration = start_req.elapsed();
             (res.is_ok(), duration)
         });
@@ -104,7 +105,7 @@ async fn test_grpc_integration() {
             // We'll consider NotFound as a "successful RPC call" if we are testing client overhead,
             // but normally we want 200 OK.
             // For now, assume height 0 exists (Genesis).
-            let res = c.get_block(0).await; 
+            let res: Result<_, _> = c.get_block(0).await; 
             let duration = start_req.elapsed();
             (res.is_ok(), duration)
         });

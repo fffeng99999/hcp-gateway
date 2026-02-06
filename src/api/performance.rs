@@ -1,5 +1,5 @@
 use crate::models::{ApiResponse, PerformanceMetrics, HistoryQueryParams};
-use crate::state::AppState;
+use crate::common::state::AppState;
 use axum::{
     extract::{Query, State, ws::{WebSocketUpgrade, WebSocket, Message}},
     Json,

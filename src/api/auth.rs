@@ -1,10 +1,10 @@
 use axum::{Json, extract::State};
 use crate::models::{LoginRequest, LoginResponse, ApiResponse, SystemUser};
-use crate::auth::create_token;
-use crate::error::{AppError, AppResult};
-use crate::extractors::ValidatedJson;
+use crate::utils::auth::create_token;
+use crate::common::error::{AppError, AppResult};
+use crate::api::extractors::ValidatedJson;
 use std::sync::Arc;
-use crate::state::AppState;
+use crate::common::state::AppState;
 
 pub async fn login(
     State(_state): State<Arc<AppState>>,

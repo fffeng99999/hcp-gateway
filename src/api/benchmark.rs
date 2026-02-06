@@ -1,7 +1,7 @@
 use crate::models::{
     ApiResponse, BenchmarkResult, CreateBenchmarkParams, PerformanceMetrics
 };
-use crate::state::AppState;
+use crate::common::state::AppState;
 use axum::{
     extract::{Path, State},
     Json,

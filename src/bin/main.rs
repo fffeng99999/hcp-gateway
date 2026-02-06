@@ -1,7 +1,10 @@
 use hcp_gateway::{
-    config, data, router, state,
+    config, 
+    utils::mock_data as data, 
+    api::router, 
+    common::state,
 };
-use hcp_gateway::grpc_client::ConsensusClient;
+use hcp_gateway::services::consensus_client::ConsensusClient;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tracing_subscriber::EnvFilter;

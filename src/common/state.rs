@@ -1,6 +1,6 @@
 use crate::models::*;
-use crate::data::MockData;
-use crate::grpc_client::ConsensusClient;
+use crate::utils::mock_data::MockData;
+use crate::services::consensus_client::ConsensusClient;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;

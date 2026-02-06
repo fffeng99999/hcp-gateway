@@ -1,5 +1,5 @@
 use crate::models::ApiResponse;
-use crate::state::AppState;
+use crate::common::state::AppState;
 use axum::{
     extract::{Path, State},
     Json,
@@ -10,7 +10,7 @@ use std::sync::Arc;
 pub async fn get_block(
     State(state): State<Arc<AppState>>,
     Path(height): Path<i64>,
-) -> Json<ApiResponse<crate::grpc_client::block::Block>> {
+) -> Json<ApiResponse<crate::services::consensus_client::block::Block>> {
     if let Some(client_ref) = &state.consensus_client {
         let mut client = client_ref.clone();
         match client.get_block(height).await {

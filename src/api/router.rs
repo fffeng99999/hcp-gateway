@@ -5,7 +5,8 @@ use axum::{
 };
 use std::sync::Arc;
 use tower_http::cors::{CorsLayer, Any};
-use crate::{api, middleware, state};
+use crate::{api, middleware};
+use crate::common::state;
 
 pub fn create_router(app_state: Arc<state::AppState>) -> Router {
     // Protected API routes (require Auth header)
@@ -130,8 +131,8 @@ mod tests {
         http::{Request, StatusCode},
     };
     use tower::Service; // Use Service trait directly
-    use crate::state::AppState;
-    use crate::data;
+    use crate::common::state::AppState;
+    use crate::utils::mock_data as data;
     use std::sync::atomic::AtomicBool;
     use std::sync::Arc;
 
