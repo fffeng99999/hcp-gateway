@@ -10,16 +10,13 @@ use std::sync::Arc;
 pub async fn get_block(
     State(state): State<Arc<AppState>>,
     Path(height): Path<i64>,
-) -> Json<ApiResponse<crate::services::consensus_client::block::Block>> {
+) -> Json<ApiResponse<serde_json::Value>> {
     if let Some(client_ref) = &state.consensus_client {
         let mut client = client_ref.clone();
         match client.get_block(height).await {
             Ok(resp) => {
-                if let Some(block) = resp.block {
-                    Json(ApiResponse::success(block))
-                } else {
-                    Json(ApiResponse::error(404, "Block not found"))
-                }
+                let json = serde_json::to_value(&resp).unwrap_or(serde_json::Value::Null);
+                Json(ApiResponse::success(json))
             }
             Err(e) => Json(ApiResponse::error(500, format!("gRPC error: {}", e))),
         }

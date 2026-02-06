@@ -3,11 +3,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
         .build_server(false)
         .build_client(true)
-        .compile(
+        .compile_protos(
             &[
                 "../hcp-server/api/proto/transaction.proto",
                 "../hcp-server/api/proto/block.proto",
                 "../hcp-server/api/proto/common.proto",
+                "../hcp-server/api/proto/benchmark.proto",
+                "../hcp-server/api/proto/metric.proto",
+                "../hcp-server/api/proto/node.proto",
             ],
             &["../hcp-server"],
         )?;

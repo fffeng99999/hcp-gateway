@@ -5,6 +5,7 @@ use axum::{
     Json,
 };
 use std::sync::Arc;
+use base64::prelude::*;
 
 // POST /transactions/submit
 pub async fn submit_transaction(
@@ -14,35 +15,28 @@ pub async fn submit_transaction(
     if let Some(client_ref) = &state.consensus_client {
         let mut client = client_ref.clone();
         
-        let payload = &req.payload;
-        // Basic extraction, assuming payload has these fields
-        let from = payload.get("from").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let to = payload.get("to").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let amount = payload.get("amount").and_then(|v| v.as_i64()).unwrap_or(0);
-        let benchmark_id = payload.get("benchmark_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
-
-        let proto_req = crate::services::consensus_client::transaction::CreateTransactionRequest {
-            from_address: from,
-            to_address: to,
-            amount,
-            benchmark_id,
+        let tx_bytes = if let Some(b64) = req.payload.get("tx_bytes").and_then(|v| v.as_str()) {
+            match BASE64_STANDARD.decode(b64) {
+                Ok(b) => b,
+                Err(_) => return Json(ApiResponse::error(400, "Invalid base64 tx_bytes")),
+            }
+        } else {
+            // Fallback: If payload is simple JSON, maybe serialize it? 
+            // For now, require tx_bytes to be correct.
+            return Json(ApiResponse::error(400, "Payload must contain 'tx_bytes' (base64 encoded Cosmos Tx)"));
         };
 
-        match client.submit_transaction(proto_req).await {
+        match client.broadcast_tx(tx_bytes).await {
             Ok(resp) => {
-                if let Some(tx) = resp.transaction {
-                    let local_tx = Transaction {
-                        id: tx.hash,
-                        from: tx.from_address,
-                        to: tx.to_address,
-                        amount: tx.amount as f64,
-                        status: tx.status,
-                        timestamp: tx.submitted_at,
-                        block_height: Some(tx.block_number as u64),
-                    };
-                    state.transactions.write().await.push(local_tx);
+                if let Some(tx_resp) = resp.tx_response {
+                    if tx_resp.code == 0 {
+                         Json(ApiResponse::success(format!("Transaction submitted. Hash: {}", tx_resp.txhash)))
+                    } else {
+                         Json(ApiResponse::error(400, format!("CheckTx failed: Code {}, Log: {}", tx_resp.code, tx_resp.raw_log)))
+                    }
+                } else {
+                     Json(ApiResponse::error(500, "Empty response from consensus"))
                 }
-                Json(ApiResponse::success("Transaction submitted".to_string()))
             }
             Err(e) => Json(ApiResponse::error(500, format!("gRPC error: {}", e))),
         }

@@ -1,0 +1,31 @@
+syntax = "proto3";
+package tendermint.types;
+
+import "google/protobuf/timestamp.proto";
+
+message BlockID {
+  bytes hash = 1;
+  PartSetHeader part_set_header = 2;
+}
+
+message PartSetHeader {
+  uint32 total = 1;
+  bytes hash = 2;
+}
+
+message Block {
+  Header header = 1;
+  Data data = 2;
+}
+
+message Header {
+  // simplified
+  string chain_id = 2;
+  int64 height = 3;
+  google.protobuf.Timestamp time = 4;
+  bytes proposer_address = 14;
+}
+
+message Data {
+  repeated bytes txs = 1;
+}

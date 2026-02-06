@@ -1,5 +1,6 @@
-use hcp_gateway::services::consensus_client::ConsensusClient;
-use hcp_gateway::services::consensus_client::transaction::CreateTransactionRequest;
+use hcp_gateway::services::server_client::ServerClient;
+use hcp_gateway::services::server_client::transaction::CreateTransactionRequest;
+use hcp_gateway::services::server_client::block::GetBlockRequest;
 use std::process::Command;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -39,7 +40,7 @@ async fn test_grpc_integration() {
     // Retry connection
     let mut client = None;
     for _ in 0..10 {
-        match ConsensusClient::connect(addr.clone(), healthy.clone()).await {
+        match ServerClient::connect(addr.clone(), healthy.clone()).await {
             Ok(c) => {
                 client = Some(c);
                 break;
@@ -53,7 +54,7 @@ async fn test_grpc_integration() {
         let _ = Command::new("docker").args(&["rm", "-f", "hcp-server-test"]).status();
         panic!("Failed to connect to hcp-server");
     }
-    let client: ConsensusClient = client.unwrap();
+    let client: ServerClient = client.unwrap();
 
     // 3. Concurrent Load Test (submit_transaction)
     println!("Testing submit_transaction with 100 concurrency...");
@@ -67,10 +68,10 @@ async fn test_grpc_integration() {
             let req = CreateTransactionRequest {
                 from_address: format!("user{}", i),
                 to_address: "dest".to_string(),
-                amount: 100,
+                amount: 100, // changed to float if proto defines it as float/double?
                 benchmark_id: "".to_string(),
             };
-            let res: Result<_, _> = c.submit_transaction(req).await;
+            let res: Result<_, _> = c.tx_client.create_transaction(req).await;
             let duration = start_req.elapsed();
             (res.is_ok(), duration)
         });
@@ -100,12 +101,7 @@ async fn test_grpc_integration() {
         let mut c = client.clone();
         set.spawn(async move {
             let start_req = std::time::Instant::now();
-            // Call get_block (requesting height 0 or 1, assuming some block exists or checking handling)
-            // Note: If server is empty, this might fail with NotFound.
-            // We'll consider NotFound as a "successful RPC call" if we are testing client overhead,
-            // but normally we want 200 OK.
-            // For now, assume height 0 exists (Genesis).
-            let res: Result<_, _> = c.get_block(0).await; 
+            let res: Result<_, _> = c.block_client.get_block(GetBlockRequest { height: 0 }).await;
             let duration = start_req.elapsed();
             (res.is_ok(), duration)
         });

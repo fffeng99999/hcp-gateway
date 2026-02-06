@@ -1,6 +1,7 @@
 use crate::models::*;
 use crate::utils::mock_data::MockData;
 use crate::services::consensus_client::ConsensusClient;
+use crate::services::server_client::ServerClient;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -12,7 +13,9 @@ pub struct AppState {
     pub algorithms: Arc<RwLock<Vec<ConsensusAlgorithm>>>,
     pub consensus_config: Arc<RwLock<ConsensusConfig>>,
     pub consensus_client: Option<ConsensusClient>,
+    pub server_client: Option<ServerClient>,
     pub consensus_healthy: Arc<AtomicBool>,
+    pub server_healthy: Arc<AtomicBool>,
     
     // Benchmarks
     pub benchmarks: Arc<RwLock<Vec<BenchmarkResult>>>,
@@ -46,7 +49,13 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(mock_data: MockData, consensus_client: Option<ConsensusClient>, consensus_healthy: Arc<AtomicBool>) -> Self {
+    pub fn new(
+        mock_data: MockData, 
+        consensus_client: Option<ConsensusClient>, 
+        server_client: Option<ServerClient>,
+        consensus_healthy: Arc<AtomicBool>,
+        server_healthy: Arc<AtomicBool>
+    ) -> Self {
         // Convert mock data to models
         let algorithms: Vec<ConsensusAlgorithm> = mock_data.algorithms.into_iter().map(|v| {
             serde_json::from_value(v).unwrap_or(ConsensusAlgorithm {
@@ -103,7 +112,9 @@ impl AppState {
             algorithms: Arc::new(RwLock::new(if algorithms.is_empty() { Self::default_algorithms() } else { algorithms })),
             consensus_config: Arc::new(RwLock::new(consensus_config)), // Use loaded or default if empty (but check if empty is valid)
             consensus_client,
+            server_client,
             consensus_healthy,
+            server_healthy,
             
             benchmarks: Arc::new(RwLock::new(benchmarks)),
             active_benchmark: Arc::new(RwLock::new(None)),

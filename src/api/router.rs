@@ -141,6 +141,8 @@ mod tests {
         let app_state = Arc::new(AppState::new(
             data::default_mock_data(),
             None,
+            None,
+            Arc::new(AtomicBool::new(true)),
             Arc::new(AtomicBool::new(true))
         ));
         let mut app = create_router(app_state);

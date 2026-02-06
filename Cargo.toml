@@ -14,8 +14,8 @@ tower = { version = "0.4", features = ["util", "timeout", "limit", "load-shed"] 
 tower-http = { version = "0.5", features = ["trace", "cors", "fs", "limit", "auth"] }
 
 # gRPC
-tonic = "0.10"
-prost = "0.12"
+tonic = "0.13"
+prost = "0.13"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -58,13 +58,16 @@ validator = { version = "0.16", features = ["derive"] }
 # Rate Limiting
 governor = "0.6"
 tower_governor = "0.4"
+prost-types = "0.13"
+base64 = "0.22.1"
+cosmos-sdk-proto = { version = "0.27.0", features = ["default", "grpc", "serde"] }
 
 [dev-dependencies]
 tokio-test = "0.4"
 mockall = "0.12"
 
 [build-dependencies]
-tonic-build = "0.10"
+tonic-build = "0.13"
 
 [lib]
 name = "hcp_gateway"
