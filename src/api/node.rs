@@ -10,6 +10,36 @@ use std::sync::Arc;
 pub async fn list_nodes(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<Vec<Node>>> {
+    // Try to fetch from server first
+    if let Some(client) = &state.server_client {
+        let mut client = client.clone();
+        let request = tonic::Request::new(crate::services::server_client::node::ListNodesRequest {
+            role: "".to_string(),
+            status: "".to_string(),
+            region: "".to_string(),
+            pagination: None,
+        });
+        
+        match client.node_client.list_nodes(request).await {
+            Ok(response) => {
+                let resp = response.into_inner();
+                let nodes: Vec<Node> = resp.nodes.into_iter().map(|n| Node {
+                    id: n.id,
+                    name: n.name,
+                    address: n.address,
+                    status: n.status,
+                    role: n.role,
+                    last_heartbeat: n.last_heartbeat,
+                    health_score: n.trust_score,
+                }).collect();
+                return Json(ApiResponse::success(nodes));
+            },
+            Err(e) => {
+                tracing::warn!("Failed to fetch nodes from server: {}", e);
+            }
+        }
+    }
+
     let nodes = state.nodes.read().await;
     Json(ApiResponse::success(nodes.clone()))
 }

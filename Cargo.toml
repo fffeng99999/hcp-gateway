@@ -11,7 +11,7 @@ license = "Apache-2.0"
 axum = { version = "0.7", features = ["ws", "macros"] }
 tokio = { version = "1", features = ["full"] }
 tower = { version = "0.4", features = ["util", "timeout", "limit", "load-shed"] }
-tower-http = { version = "0.5", features = ["trace", "cors", "fs", "limit", "auth"] }
+tower-http = { version = "0.5", features = ["trace", "cors", "fs", "limit", "auth", "request-id", "util"] }
 
 # gRPC
 tonic = "0.13"

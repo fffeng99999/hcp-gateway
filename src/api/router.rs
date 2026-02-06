@@ -5,6 +5,8 @@ use axum::{
 };
 use std::sync::Arc;
 use tower_http::cors::{CorsLayer, Any};
+use tower_http::request_id::{SetRequestIdLayer, MakeRequestUuid};
+use tower::ServiceBuilder;
 use crate::{api, middleware};
 use crate::common::state;
 
@@ -113,13 +115,18 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
         // API v1 (and default /api)
         .nest("/api", api_routes)
         
-        // CORS and Logging
-        .layer(CorsLayer::new()
-            .allow_origin(Any)
-            .allow_methods(Any)
-            .allow_headers(Any)
+        // Middleware Stack
+        .layer(
+            ServiceBuilder::new()
+                .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
+                .layer(from_fn(middleware::propagate_request_id))
+                .layer(CorsLayer::new()
+                    .allow_origin(Any)
+                    .allow_methods(Any)
+                    .allow_headers(Any)
+                )
+                .layer(from_fn(middleware::logging_middleware))
         )
-        .layer(from_fn(middleware::logging_middleware))
         .with_state(app_state)
 }
 
