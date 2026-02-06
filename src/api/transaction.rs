@@ -11,28 +11,44 @@ pub async fn submit_transaction(
     State(state): State<Arc<AppState>>,
     Json(req): Json<TransactionSubmitRequest>,
 ) -> Json<ApiResponse<String>> {
-    let mut transactions = state.transactions.write().await;
-    
-    // Simulate batch submission
-    let batch_size = req.batch_size.unwrap_or(1);
-    let mut last_id = String::new();
-    
-    for _ in 0..batch_size {
-        let id = uuid::Uuid::new_v4().to_string();
-        last_id = id.clone();
+    if let Some(client_ref) = &state.consensus_client {
+        let mut client = client_ref.clone();
         
-        transactions.push(Transaction {
-            id,
-            from: "user_wallet".to_string(),
-            to: "contract_address".to_string(),
-            amount: 0.0,
-            status: "pending".to_string(),
-            timestamp: chrono::Utc::now().to_rfc3339(),
-            block_height: None,
-        });
+        let payload = &req.payload;
+        // Basic extraction, assuming payload has these fields
+        let from = payload.get("from").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let to = payload.get("to").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let amount = payload.get("amount").and_then(|v| v.as_i64()).unwrap_or(0);
+        let benchmark_id = payload.get("benchmark_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+        let proto_req = crate::grpc_client::transaction::CreateTransactionRequest {
+            from_address: from,
+            to_address: to,
+            amount,
+            benchmark_id,
+        };
+
+        match client.submit_transaction(proto_req).await {
+            Ok(resp) => {
+                if let Some(tx) = resp.transaction {
+                    let local_tx = Transaction {
+                        id: tx.hash,
+                        from: tx.from_address,
+                        to: tx.to_address,
+                        amount: tx.amount as f64,
+                        status: tx.status,
+                        timestamp: tx.submitted_at,
+                        block_height: Some(tx.block_number as u64),
+                    };
+                    state.transactions.write().await.push(local_tx);
+                }
+                Json(ApiResponse::success("Transaction submitted".to_string()))
+            }
+            Err(e) => Json(ApiResponse::error(500, format!("gRPC error: {}", e))),
+        }
+    } else {
+        Json(ApiResponse::error(503, "Consensus client not available"))
     }
-    
-    Json(ApiResponse::success(format!("Submitted {} transactions. Last ID: {}", batch_size, last_id)))
 }
 
 // GET /transactions/stats

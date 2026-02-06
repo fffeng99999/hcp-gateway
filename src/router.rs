@@ -49,6 +49,11 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
             .route("/:id", get(api::transaction::get_transaction))
             .route("/:id/cancel", post(api::transaction::cancel_transaction))
         )
+
+        // Block Module
+        .nest("/blocks", Router::new()
+            .route("/:height", get(api::block::get_block))
+        )
         
         // Performance Module (HTTP endpoints)
         .nest("/performance", Router::new()
@@ -127,10 +132,16 @@ mod tests {
     use tower::Service; // Use Service trait directly
     use crate::state::AppState;
     use crate::data;
+    use std::sync::atomic::AtomicBool;
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_health_check() {
-        let app_state = Arc::new(AppState::new(data::default_mock_data()));
+        let app_state = Arc::new(AppState::new(
+            data::default_mock_data(),
+            None,
+            Arc::new(AtomicBool::new(true))
+        ));
         let mut app = create_router(app_state);
 
         let req = Request::builder().uri("/health").body(Body::empty()).unwrap();

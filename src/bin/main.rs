@@ -1,16 +1,8 @@
-mod config;
-mod error;
-mod models;
-mod state;
-mod tasks;
-mod middleware;
-mod api;
-mod services;
-mod data;
-mod router;
-mod auth;
-mod extractors;
-
+use hcp_gateway::{
+    config, data, router, state,
+};
+use hcp_gateway::grpc_client::ConsensusClient;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
 
@@ -33,8 +25,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map_err(|e| format!("Failed to load mock data: {}", e))?
         .unwrap_or_else(data::default_mock_data);
 
+    // Initialize Consensus Client
+    let consensus_grpc_addr = std::env::var("HCP_CONSENSUS_GRPC_ADDR")
+        .unwrap_or_else(|_| "tcp://127.0.0.1:50051".to_string());
+    
+    let consensus_healthy = Arc::new(AtomicBool::new(true));
+    
+    tracing::info!("Connecting to Consensus Service at {}", consensus_grpc_addr);
+    let consensus_client = match ConsensusClient::connect(consensus_grpc_addr, consensus_healthy.clone()).await {
+        Ok(client) => Some(client),
+        Err(e) => {
+            tracing::error!("Failed to connect to Consensus Service: {}", e);
+            consensus_healthy.store(false, std::sync::atomic::Ordering::SeqCst);
+            None
+        }
+    };
+
     // Initialize application state (mock data included)
-    let app_state = Arc::new(state::AppState::new(mock_data));
+    let app_state = Arc::new(state::AppState::new(mock_data, consensus_client, consensus_healthy));
 
     // Load configuration
     let config = config::Config::default();
