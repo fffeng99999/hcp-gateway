@@ -301,48 +301,92 @@ impl AppState {
 
     fn default_general_settings() -> GeneralSettings {
         GeneralSettings {
-            system_name: "HCP Gateway".to_string(),
+            system_name: "HCP-Bench".to_string(),
             version: "1.0.0".to_string(),
             debug_mode: true,
+            language: "zh-CN".to_string(),
+            timezone: "Asia/Shanghai".to_string(),
+            log_level: "info".to_string(),
+            data_retention: 30,
+            auto_cleanup: true,
+            performance_monitor: true,
+            rate_limit: 1000,
         }
     }
 
     fn default_network_settings() -> NetworkSettings {
         NetworkSettings {
-            p2p_port: 9000,
-            max_peers: 50,
-            bandwidth_limit: 1000,
+            listen_address: "0.0.0.0".to_string(),
+            p2p_port: 26656,
+            rpc_port: 26657,
+            max_connections: 100,
+            max_inbound: 80,
+            max_outbound: 20,
+            upnp: false,
+            nat_traversal: false,
+            upload_bandwidth: 1000,
+            download_bandwidth: 1000,
+            seed_nodes: vec![],
         }
     }
 
     fn default_storage_settings() -> StorageSettings {
         StorageSettings {
             data_path: "./data".to_string(),
-            retention_days: 30,
-            compression_enabled: true,
+            log_path: "./logs".to_string(),
+            db_type: "leveldb".to_string(),
+            cache_size: 1024,
+            compression: true,
+            compression_algo: "snappy".to_string(),
+            auto_archive: false,
+            archive_threshold: 30,
         }
     }
 
     fn default_security_settings() -> SecuritySettings {
         SecuritySettings {
-            jwt_secret: "secret_key".to_string(),
+            jwt_enabled: true,
+            jwt_expiration: 3600,
+            two_factor_auth: false,
+            password_policy: vec![
+                "min_length:8".to_string(),
+                "require_uppercase".to_string(),
+                "require_number".to_string(),
+            ],
+            access_log: true,
+            login_lockout: true,
+            lockout_threshold: 5,
+            lockout_duration: 300,
+            data_encryption: true,
+            encryption_algo: "aes-256-gcm".to_string(),
+            tls_enabled: false,
+            tls_version: "1.2".to_string(),
             ip_whitelist: vec!["127.0.0.1".to_string()],
-            enable_ssl: false,
         }
     }
 
     fn default_notification_settings() -> NotificationSettings {
         NotificationSettings {
             email_enabled: false,
+            smtp_host: "".to_string(),
+            smtp_port: 25,
+            sender_email: "".to_string(),
+            recipients: vec![],
+            webhook_enabled: false,
             webhook_url: "".to_string(),
+            webhook_token: "".to_string(),
+            system_events: vec![],
+            performance_events: vec![],
+            security_events: vec![],
         }
     }
 
     fn default_backup_settings() -> BackupSettings {
         BackupSettings {
             auto_backup: true,
-            interval_hours: 24,
-            max_backups: 7,
+            frequency: "daily".to_string(),
+            retention_count: 7,
+            backup_path: "./backups".to_string(),
         }
     }
 

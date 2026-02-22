@@ -270,44 +270,90 @@ pub struct TrendData {
 // ============== 网关设置与系统配置模型 ==============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GeneralSettings {
     pub system_name: String,
     pub version: String,
     pub debug_mode: bool,
+    pub language: String,
+    pub timezone: String,
+    pub log_level: String,
+    pub data_retention: u32,
+    pub auto_cleanup: bool,
+    pub performance_monitor: bool,
+    pub rate_limit: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NetworkSettings {
+    pub listen_address: String,
     pub p2p_port: u16,
-    pub max_peers: u32,
-    pub bandwidth_limit: u32, // 对等网络带宽上限（Mbps）
+    pub rpc_port: u16,
+    pub max_connections: u32,
+    pub max_inbound: u32,
+    pub max_outbound: u32,
+    pub upnp: bool,
+    pub nat_traversal: bool,
+    pub upload_bandwidth: u32,
+    pub download_bandwidth: u32,
+    pub seed_nodes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StorageSettings {
     pub data_path: String,
-    pub retention_days: u32,
-    pub compression_enabled: bool,
+    pub log_path: String,
+    pub db_type: String,
+    pub cache_size: u32,
+    pub compression: bool,
+    pub compression_algo: String,
+    pub auto_archive: bool,
+    pub archive_threshold: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SecuritySettings {
-    pub jwt_secret: String, // JWT 密钥，在 API 响应中应做脱敏处理
+    pub jwt_enabled: bool,
+    pub jwt_expiration: u32,
+    pub two_factor_auth: bool,
+    pub password_policy: Vec<String>,
+    pub access_log: bool,
+    pub login_lockout: bool,
+    pub lockout_threshold: u32,
+    pub lockout_duration: u32,
+    pub data_encryption: bool,
+    pub encryption_algo: String,
+    pub tls_enabled: bool,
+    pub tls_version: String,
     pub ip_whitelist: Vec<String>,
-    pub enable_ssl: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NotificationSettings {
     pub email_enabled: bool,
+    pub smtp_host: String,
+    pub smtp_port: u16,
+    pub sender_email: String,
+    pub recipients: Vec<String>,
+    pub webhook_enabled: bool,
     pub webhook_url: String,
+    pub webhook_token: String,
+    pub system_events: Vec<String>,
+    pub performance_events: Vec<String>,
+    pub security_events: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BackupSettings {
     pub auto_backup: bool,
-    pub interval_hours: u32,
-    pub max_backups: u32,
+    pub frequency: String,
+    pub retention_count: u32,
+    pub backup_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
