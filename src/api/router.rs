@@ -175,7 +175,9 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
                     post(api::settings::reset_user_password),
                 )
                 .route("/user/validate", post(api::settings::validate_user))
-                .route("/system", get(api::settings::get_system_info)),
+                .route("/system", get(api::settings::get_system_info))
+                .route("/system/logs", get(api::settings::get_system_logs))
+                .route("/system/restart", post(api::settings::restart_system)),
         )
         // 用户认证与个人信息（需要登录）
         .route("/auth/me", get(api::auth::me))

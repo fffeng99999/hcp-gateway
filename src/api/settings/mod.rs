@@ -25,7 +25,7 @@ pub use security::{get_security, update_security};
 // 存储配置接口导出
 pub use storage::{get_storage, update_storage, validate_storage_path};
 // 系统信息接口导出
-pub use system::get_system_info;
+pub use system::{get_system_info, get_system_logs, restart_system};
 // 用户管理接口导出
 pub use user::{
     create_user, delete_user, get_users, reset_user_password, update_user, validate_user,

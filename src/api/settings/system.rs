@@ -3,6 +3,8 @@ use crate::common::state::AppState;
 use crate::models::ApiResponse;
 use axum::{extract::State, response::IntoResponse};
 use serde::Serialize;
+use std::fs::{self, File};
+use std::io::{Read, Seek, SeekFrom};
 use std::process::Command;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -31,6 +33,13 @@ pub struct SystemInfo {
     pub config_version: u64,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SystemLogEntry {
+    pub name: String,
+    pub content: String,
+}
+
 fn format_uptime(secs: u64) -> String {
     let days = secs / 86400;
     let hours = (secs % 86400) / 3600;
@@ -49,6 +58,28 @@ fn run_command(cmd: &str) -> Option<String> {
     } else {
         Some(s)
     }
+}
+
+fn tail_lines(input: &str, max_lines: usize) -> String {
+    let lines: Vec<&str> = input.lines().collect();
+    let start = lines.len().saturating_sub(max_lines);
+    lines[start..].join("\n")
+}
+
+fn read_tail_content(path: &std::path::Path, max_bytes: u64) -> Option<String> {
+    let mut file = File::open(path).ok()?;
+    let metadata = file.metadata().ok()?;
+    let file_len = metadata.len();
+    let start = file_len.saturating_sub(max_bytes);
+    if file.seek(SeekFrom::Start(start)).is_err() {
+        return None;
+    }
+    let mut buffer = Vec::new();
+    if file.read_to_end(&mut buffer).is_err() {
+        return None;
+    }
+    let content = String::from_utf8_lossy(&buffer).to_string();
+    Some(content)
 }
 
 pub async fn get_system_info(State(state): State<Arc<AppState>>) -> impl IntoResponse {
@@ -180,4 +211,54 @@ pub async fn get_system_info(State(state): State<Arc<AppState>>) -> impl IntoRes
     };
 
     respond_with_version(&state, ApiResponse::success(info), false)
+}
+
+pub async fn get_system_logs(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let log_dir = "/home/hcp-dev/hcp-project/logs";
+    let mut entries = Vec::new();
+
+    if let Ok(dir) = fs::read_dir(log_dir) {
+        let mut files: Vec<_> = dir
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.path())
+            .filter(|path| path.extension().map(|ext| ext == "log").unwrap_or(false))
+            .collect();
+
+        files.sort();
+
+        for path in files {
+            let name = path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default()
+                .to_string();
+            if name.is_empty() {
+                continue;
+            }
+            let content = read_tail_content(&path, 128 * 1024)
+                .unwrap_or_else(|| "无法读取日志内容".to_string());
+            entries.push(SystemLogEntry {
+                name,
+                content: tail_lines(&content, 200),
+            });
+        }
+    }
+
+    respond_with_version(&state, ApiResponse::success(entries), false)
+}
+
+pub async fn restart_system(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let script = "/home/hcp-dev/hcp-project/hcp/restart_hcp.sh";
+    let log_path = "/home/hcp-dev/hcp-project/logs/restart.log";
+    let cmd = format!("nohup bash {} > {} 2>&1 &", script, log_path);
+    let status = Command::new("sh").arg("-c").arg(cmd).status();
+
+    match status {
+        Ok(_) => respond_with_version(
+            &state,
+            ApiResponse::success("重启任务已触发".to_string()),
+            false,
+        ),
+        Err(_) => respond_with_version(&state, ApiResponse::error(500, "重启失败"), false),
+    }
 }
