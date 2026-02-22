@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 初始化后端服务客户端（HCP Server）
     let server_grpc_addr = std::env::var("HCP_SERVER_GRPC_ADDR")
-        .unwrap_or_else(|_| "http://127.0.0.1:50051".to_string());
+        .unwrap_or_else(|_| "http://127.0.0.1:8081".to_string());
 
     let server_healthy = Arc::new(AtomicBool::new(true));
 
