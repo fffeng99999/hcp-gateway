@@ -11,7 +11,7 @@ use axum::{
 use std::sync::Arc;
 use tokio::time::Duration;
 
-// GET /performance/metrics
+// GET /performance/metrics 获取最新一条性能指标
 pub async fn get_metrics(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<PerformanceMetrics>> {
@@ -20,7 +20,7 @@ pub async fn get_metrics(
     Json(ApiResponse::success(latest))
 }
 
-// GET /performance/detailed
+// GET /performance/detailed 获取详细性能指标（当前等价于 metrics）
 pub async fn get_detailed_metrics(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<PerformanceMetrics>> {
@@ -29,19 +29,19 @@ pub async fn get_detailed_metrics(
     Json(ApiResponse::success(latest))
 }
 
-// GET /performance/history
+// GET /performance/history 按时间范围与条数获取性能指标历史
 pub async fn get_history(
     State(state): State<Arc<AppState>>,
     Query(params): Query<HistoryQueryParams>,
 ) -> Json<ApiResponse<Vec<PerformanceMetrics>>> {
     let history = state.performance_history.read().await;
-    // Filter by time would go here
+    // 如需按时间过滤，可在此处增加过滤逻辑
     let limit = params.limit.unwrap_or(100);
     let result = history.iter().take(limit).cloned().collect();
     Json(ApiResponse::success(result))
 }
 
-// GET /performance/summary
+// GET /performance/summary 获取性能指标汇总信息
 pub async fn get_summary(
     State(state): State<Arc<AppState>>,
     Query(_params): Query<HistoryQueryParams>,
@@ -64,22 +64,22 @@ pub async fn get_summary(
     Json(ApiResponse::success(summary))
 }
 
-// POST /performance/clear
+// POST /performance/clear 清空性能指标历史数据
 pub async fn clear_data(State(state): State<Arc<AppState>>) -> Json<ApiResponse<String>> {
     let mut history = state.performance_history.write().await;
     history.clear();
     Json(ApiResponse::success("Performance data cleared".to_string()))
 }
 
-// POST /performance/export
+// POST /performance/export 导出性能指标数据（当前为模拟实现）
 pub async fn export_performance_data(
     State(_state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<String>> {
-    // Mock export
+    // 当前仅模拟导出行为，实际导出逻辑可在此扩展
     Json(ApiResponse::success("Export started".to_string()))
 }
 
-// GET /performance/comparison
+// GET /performance/comparison 获取当前指标与历史基线的对比
 pub async fn get_performance_comparison(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<serde_json::Value>> {
@@ -124,7 +124,7 @@ pub async fn get_performance_comparison(
     Json(ApiResponse::success(improvement))
 }
 
-// WebSocket Handler
+// WebSocket Handler 性能指标实时推送接口
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<Arc<AppState>>,

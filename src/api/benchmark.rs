@@ -6,7 +6,7 @@ use axum::{
 };
 use std::sync::Arc;
 
-// GET /benchmarks
+// GET /benchmarks 获取基准测试任务列表
 pub async fn list_benchmarks(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<Vec<BenchmarkResult>>> {
@@ -14,7 +14,7 @@ pub async fn list_benchmarks(
     Json(ApiResponse::success(benchmarks.clone()))
 }
 
-// POST /benchmarks
+// POST /benchmarks 创建新的基准测试任务
 pub async fn create_benchmark(
     State(state): State<Arc<AppState>>,
     Json(params): Json<CreateBenchmarkParams>,
@@ -24,7 +24,7 @@ pub async fn create_benchmark(
     let new_benchmark = BenchmarkResult {
         benchmark_id: uuid::Uuid::new_v4().to_string(),
         algorithm_id: params.config.algorithm_id,
-        start_time: "".to_string(), // Not started yet
+        start_time: "".to_string(), // 尚未启动时为空字符串
         end_time: None,
         metrics: PerformanceMetrics::default(),
         status: "pending".to_string(),
@@ -34,7 +34,7 @@ pub async fn create_benchmark(
     Json(ApiResponse::success(new_benchmark))
 }
 
-// GET /benchmarks/:id
+// GET /benchmarks/:id 获取指定基准测试任务详情
 pub async fn get_benchmark(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
@@ -47,7 +47,7 @@ pub async fn get_benchmark(
     }
 }
 
-// POST /benchmarks/:id/start
+// POST /benchmarks/:id/start 启动指定基准测试任务
 pub async fn start_benchmark(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
@@ -77,7 +77,7 @@ pub async fn start_benchmark(
     }
 }
 
-// POST /benchmarks/:id/stop
+// POST /benchmarks/:id/stop 停止运行中的基准测试任务
 pub async fn stop_benchmark(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
@@ -105,7 +105,7 @@ pub async fn stop_benchmark(
     }
 }
 
-// POST /benchmarks/:id/pause
+// POST /benchmarks/:id/pause 暂停运行中的基准测试任务
 pub async fn pause_benchmark(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
@@ -124,7 +124,7 @@ pub async fn pause_benchmark(
     }
 }
 
-// DELETE /benchmarks/:id
+// DELETE /benchmarks/:id 删除指定的基准测试任务
 pub async fn delete_benchmark(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,

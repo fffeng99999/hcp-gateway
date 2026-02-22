@@ -27,8 +27,8 @@ impl ConsensusClient {
         endpoint: String,
         healthy: Arc<AtomicBool>,
     ) -> Result<Self, tonic::transport::Error> {
-        // Ensure endpoint has http scheme if missing, though Endpoint::from_shared usually handles it.
-        // Cosmos gRPC usually requires http2.
+        // 确保端点字符串包含 http 前缀；Endpoint::from_shared 一般会处理该情况
+        // Cosmos gRPC 通常运行在 HTTP/2 协议之上
         let channel = Endpoint::from_shared(endpoint)?
             .connect_timeout(Duration::from_secs(5))
             .connect()

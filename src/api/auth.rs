@@ -10,7 +10,7 @@ pub async fn login(
     State(_state): State<Arc<AppState>>,
     ValidatedJson(req): ValidatedJson<LoginRequest>,
 ) -> AppResult<LoginResponse> {
-    // Mock user verification
+    // 使用内置账号进行模拟用户校验
     if req.username == "admin" && req.password == "admin123" {
         let user = SystemUser {
             id: "1".to_string(),

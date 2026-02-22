@@ -8,13 +8,13 @@ use axum::{
 };
 use std::sync::Arc;
 
-// GET /analysis/summary
+// GET /analysis/summary 获取基于基准测试结果的概要分析
 pub async fn get_summary(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<serde_json::Value>> {
     let benchmarks = state.benchmarks.read().await;
 
-    // Simple mock analysis
+    // 简单的示例性分析逻辑
     let total_benchmarks = benchmarks.len();
     let best_performance = benchmarks
         .iter()
@@ -31,7 +31,7 @@ pub async fn get_summary(
     Json(ApiResponse::success(summary))
 }
 
-// GET /analysis/report (Get latest report or list)
+// GET /analysis/report 获取分析报告列表或最新报告
 pub async fn get_report(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<Vec<AnalysisReport>>> {
@@ -39,11 +39,11 @@ pub async fn get_report(
     Json(ApiResponse::success(reports.clone()))
 }
 
-// GET /analysis/prediction
+// GET /analysis/prediction 获取性能与容量的预测结果（示例数据）
 pub async fn get_prediction(
     State(_state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<serde_json::Value>> {
-    // Mock prediction
+    // 目前使用固定示例数据，后续可接入真实模型
     let prediction = serde_json::json!({
         "predicted_throughput_next_hour": 5500.0,
         "predicted_latency_trend": "stable",
@@ -52,16 +52,16 @@ pub async fn get_prediction(
     Json(ApiResponse::success(prediction))
 }
 
-// GET /analysis/comparison
+// GET /analysis/comparison 获取不同算法之间的性能对比
 pub async fn get_comparison(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<serde_json::Value>> {
     let benchmarks = state.benchmarks.read().await;
 
-    // Group by algorithm
+    // 按算法维度聚合对比数据
     let mut comparison = serde_json::Map::new();
 
-    // Mock comparison data if no benchmarks
+    // 若没有任何基准测试结果，则返回内置的示例对比数据
     if benchmarks.is_empty() {
         comparison.insert(
             "tPBFT".to_string(),
@@ -72,7 +72,7 @@ pub async fn get_comparison(
             serde_json::json!({"avg_tps": 4500.0, "avg_latency": 180.0}),
         );
     } else {
-        // Real aggregation logic would go here
+        // 真实场景下应根据 benchmarks 中的数据进行聚合计算
         comparison.insert(
             "tPBFT".to_string(),
             serde_json::json!({"avg_tps": 5200.0, "avg_latency": 140.0}),
@@ -82,12 +82,12 @@ pub async fn get_comparison(
     Json(ApiResponse::success(serde_json::Value::Object(comparison)))
 }
 
-// GET /analysis/limits/:algo
+// GET /analysis/limits/:algo 获取指定算法的理论与实测性能上限
 pub async fn get_algo_limits(
     Path(algo): Path<String>,
     State(_state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<serde_json::Value>> {
-    // Return theoretical vs actual limits
+    // 返回理论极限值与当前实测值，帮助分析性能瓶颈
     let limits = serde_json::json!({
         "algorithm": algo,
         "theoretical_tps": 10000.0,
@@ -100,12 +100,12 @@ pub async fn get_algo_limits(
     Json(ApiResponse::success(limits))
 }
 
-// GET /analysis/trends
+// GET /analysis/trends 获取性能指标随时间变化的趋势
 pub async fn get_trends(
     State(_state): State<Arc<AppState>>,
     Query(_params): Query<serde_json::Value>,
 ) -> Json<ApiResponse<Vec<TrendData>>> {
-    // Mock trend data
+    // 当前返回固定的趋势示例数据
     let now = chrono::Utc::now();
     let trends = (0..10)
         .map(|i| TrendData {
@@ -118,7 +118,7 @@ pub async fn get_trends(
     Json(ApiResponse::success(trends))
 }
 
-// POST /analysis/report/generate
+// POST /analysis/report/generate 生成分析报告并以附件形式下载
 pub async fn generate_report(
     State(_state): State<Arc<AppState>>,
     Json(req): Json<GenerateReportRequest>,
@@ -139,7 +139,7 @@ pub async fn generate_report(
         .into_response()
 }
 
-// POST /analysis/export
+// POST /analysis/export 导出分析数据（CSV 等格式）
 pub async fn export_analysis(
     State(_state): State<Arc<AppState>>,
     Json(params): Json<ExportParams>,

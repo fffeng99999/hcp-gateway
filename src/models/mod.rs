@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use validator::Validate;
 
-// ============== Generic Response Wrapper ==============
+// ============== 通用 API 响应包装结构 ==============
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiResponse<T> {
@@ -33,7 +33,7 @@ impl<T> ApiResponse<T> {
     }
 }
 
-// ============== Auth Models ==============
+// ============== 认证相关模型 ==============
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
@@ -56,7 +56,7 @@ pub struct LoginResponse {
     pub user: SystemUser,
 }
 
-// ============== Consensus Models ==============
+// ============== 共识配置与请求模型 ==============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConsensusAlgorithm {
@@ -93,7 +93,7 @@ pub struct UpdateParametersRequest {
     pub value: serde_json::Value,
 }
 
-// ============== Benchmark Models ==============
+// ============== 基准测试相关模型 ==============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkConfig {
@@ -127,18 +127,18 @@ pub struct BenchmarkResult {
     pub start_time: String,
     pub end_time: Option<String>,
     pub metrics: PerformanceMetrics,
-    pub status: String, // running, completed, failed, paused
+    pub status: String, // 运行中 running、已完成 completed、失败 failed、暂停 paused
 }
 
-// ============== Node Models ==============
+// ============== 节点相关模型 ==============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Node {
     pub id: String,
     pub name: String,
     pub address: String,
-    pub status: String, // online, offline
-    pub role: String,   // leader, validator, observer
+    pub status: String, // 在线 online、离线 offline
+    pub role: String,   // 角色：leader、validator、observer
     pub last_heartbeat: String,
     pub health_score: f64,
 }
@@ -161,24 +161,24 @@ pub struct NodeRegistrationRequest {
     pub public_key: String,
 }
 
-// ============== Performance Models ==============
+// ============== 性能指标与导出模型 ==============
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PerformanceMetrics {
-    pub throughput: f64, // TPS
-    pub latency: f64,    // ms
+    pub throughput: f64, // 吞吐量（TPS）
+    pub latency: f64,    // 延迟（毫秒 ms）
     pub latency_p99: f64,
     pub latency_p999: f64,
-    pub finality_time: f64,     // ms
-    pub network_bandwidth: f64, // Mbps
-    pub cpu_usage: f64,         // %
-    pub memory_usage: f64,      // MB
+    pub finality_time: f64,     // 交易最终确认时间（毫秒 ms）
+    pub network_bandwidth: f64, // 网络带宽（Mbps）
+    pub cpu_usage: f64,         // CPU 使用率（百分比）
+    pub memory_usage: f64,      // 内存占用（MB）
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct ExportParams {
     #[validate(length(min = 1))]
-    pub format: String, // csv, json, excel
+    pub format: String, // 导出格式：csv、json、excel
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
@@ -189,7 +189,7 @@ pub struct HistoryQueryParams {
     pub limit: Option<usize>,
 }
 
-// ============== Transaction Models ==============
+// ============== 交易相关模型 ==============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
@@ -197,14 +197,14 @@ pub struct Transaction {
     pub from: String,
     pub to: String,
     pub amount: f64,
-    pub status: String, // pending, confirmed, failed
+    pub status: String, // 状态：待确认 pending、已确认 confirmed、失败 failed
     pub timestamp: String,
     pub block_height: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct TransactionSubmitRequest {
-    pub payload: serde_json::Value, // Flexible payload
+    pub payload: serde_json::Value, // 交易负载，结构可扩展
     #[validate(range(min = 1, max = 10000))]
     pub rate_limit: Option<u32>,
     #[validate(range(min = 1, max = 1000))]
@@ -222,24 +222,24 @@ pub struct TransactionQueryParams {
     pub offset: Option<usize>,
 }
 
-// ============== Anti-Manipulation Models ==============
+// ============== 反操纵检测相关模型 ==============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AntiManipulationConfig {
-    pub strategies: HashMap<String, bool>, // strategy_name -> enabled
+    pub strategies: HashMap<String, bool>, // 策略名称 -> 是否启用
     pub thresholds: HashMap<String, f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ManipulationEvent {
     pub id: String,
-    pub event_type: String, // front_running, wash_trading, etc.
+    pub event_type: String, // 事件类型：front_running、wash_trading 等
     pub timestamp: String,
-    pub severity: String, // low, medium, high
+    pub severity: String, // 严重程度：low、medium、high
     pub details: serde_json::Value,
 }
 
-// ============== Analysis Models ==============
+// ============== 分析与报告相关模型 ==============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalysisReport {
@@ -256,7 +256,7 @@ pub struct GenerateReportRequest {
     pub title: String,
     pub content: String,
     #[validate(length(min = 1))]
-    pub format: String, // pdf, docx
+    pub format: String, // 报告格式：pdf、docx
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -266,7 +266,7 @@ pub struct TrendData {
     pub value: f64,
 }
 
-// ============== Settings Models ==============
+// ============== 网关设置与系统配置模型 ==============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeneralSettings {
@@ -279,7 +279,7 @@ pub struct GeneralSettings {
 pub struct NetworkSettings {
     pub p2p_port: u16,
     pub max_peers: u32,
-    pub bandwidth_limit: u32, // Mbps
+    pub bandwidth_limit: u32, // 对等网络带宽上限（Mbps）
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -291,7 +291,7 @@ pub struct StorageSettings {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecuritySettings {
-    pub jwt_secret: String, // Should be masked in responses
+    pub jwt_secret: String, // JWT 密钥，在 API 响应中应做脱敏处理
     pub ip_whitelist: Vec<String>,
     pub enable_ssl: bool,
 }
@@ -313,7 +313,7 @@ pub struct BackupSettings {
 pub struct SystemUser {
     pub id: String,
     pub username: String,
-    pub role: String, // admin, viewer
+    pub role: String, // 角色：管理员 admin、只读 viewer
     pub email: String,
     pub created_at: String,
     pub status: String,
@@ -326,5 +326,5 @@ pub struct BackupRecord {
     pub filename: String,
     pub size_bytes: u64,
     pub created_at: String,
-    pub status: String, // success, failed
+    pub status: String, // 备份状态：成功 success 或失败 failed
 }

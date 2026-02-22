@@ -22,6 +22,7 @@ pub struct HealthStatus {
     pub version: String,
 }
 
+// 简单健康检查接口，返回网关当前状态与版本号
 pub async fn health_check(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let is_healthy = state.consensus_healthy.load(Ordering::SeqCst);
 
@@ -39,6 +40,7 @@ pub async fn health_check(State(state): State<Arc<AppState>>) -> impl IntoRespon
     (code, Json(ApiResponse::success(status)))
 }
 
+// 系统信息 SSE 流，周期性推送共识、服务健康状态与配置版本号
 pub async fn system_stream(
     State(state): State<Arc<AppState>>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {

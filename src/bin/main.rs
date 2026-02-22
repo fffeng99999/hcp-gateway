@@ -7,7 +7,7 @@ use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize tracing
+    // 初始化 tracing 日志系统
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::from_default_env()
@@ -18,13 +18,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Starting HCP Gateway...");
 
-    // Load mock data from JSON
+    // 从 JSON 文件中加载网关使用的模拟数据
     let mock_data = data::load_mock_data("data/mock_data.json")
         .await
         .map_err(|e| format!("Failed to load mock data: {}", e))?
         .unwrap_or_else(data::default_mock_data);
 
-    // Initialize Consensus Client (Direct to Cosmos/CometBFT)
+    // 初始化共识客户端（直接连接 Cosmos / CometBFT）
     let consensus_grpc_addr = std::env::var("HCP_CONSENSUS_GRPC_ADDR")
         .unwrap_or_else(|_| "http://127.0.0.1:9090".to_string());
 
@@ -52,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    // Initialize Server Client (Backend Service)
+    // 初始化后端服务客户端（HCP Server）
     let server_grpc_addr = std::env::var("HCP_SERVER_GRPC_ADDR")
         .unwrap_or_else(|_| "http://127.0.0.1:50051".to_string());
 
@@ -76,7 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         };
 
-    // Initialize application state (mock data included)
+    // 初始化应用全局状态（包含模拟数据和后端客户端）
     let app_state = Arc::new(state::AppState::new(
         mock_data,
         consensus_client,
@@ -85,13 +85,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         server_healthy,
     ));
 
-    // Load configuration
+    // 加载网关配置
     let config = config::Config::default();
 
-    // Build router
+    // 构建 HTTP 路由
     let app = router::create_router(app_state);
 
-    // Start server
+    // 启动 HTTP 服务监听
     let addr = format!("{}:{}", config.server_addr, config.server_port);
     let listener = tokio::net::TcpListener::bind(&addr)
         .await

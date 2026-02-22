@@ -9,7 +9,7 @@ use tokio::time::sleep;
 
 #[tokio::test]
 async fn test_grpc_integration() {
-    // 1. Start hcp-server docker container
+    // 1. 启动 hcp-server 的 Docker 容器
     println!("Starting hcp-server container...");
     let _ = Command::new("docker")
         .args(&["rm", "-f", "hcp-server-test"])
@@ -27,20 +27,20 @@ async fn test_grpc_integration() {
         ])
         .status();
 
-    // Check if docker command was successful (or if docker is missing)
+    // 检查 Docker 命令是否执行成功（或本机是否安装 Docker）
     if status.is_err() || !status.unwrap().success() {
         println!("Skipping test: Docker not available or failed to start");
         return;
     }
 
-    // Give it time to start
+    // 留出一定时间让服务完成启动
     sleep(Duration::from_secs(5)).await;
 
-    // 2. Connect client
+    // 2. 初始化 gRPC 客户端连接
     let addr = "http://127.0.0.1:50051".to_string();
     let healthy = Arc::new(AtomicBool::new(true));
 
-    // Retry connection
+    // 多次重试连接，避免服务尚未就绪
     let mut client = None;
     for _ in 0..10 {
         match ServerClient::connect(addr.clone(), healthy.clone()).await {
@@ -53,7 +53,7 @@ async fn test_grpc_integration() {
     }
 
     if client.is_none() {
-        // Cleanup and fail
+        // 清理容器并终止测试
         let _ = Command::new("docker")
             .args(&["rm", "-f", "hcp-server-test"])
             .status();
@@ -61,7 +61,7 @@ async fn test_grpc_integration() {
     }
     let client: ServerClient = client.unwrap();
 
-    // 3. Concurrent Load Test (submit_transaction)
+    // 3. 并发压测 submit_transaction 接口（100 并发）
     println!("Testing submit_transaction with 100 concurrency...");
     let mut set = tokio::task::JoinSet::new();
 
@@ -69,11 +69,11 @@ async fn test_grpc_integration() {
         let mut c = client.clone();
         set.spawn(async move {
             let start_req = std::time::Instant::now();
-            // Call submit
+            // 调用提交交易接口
             let req = CreateTransactionRequest {
                 from_address: format!("user{}", i),
                 to_address: "dest".to_string(),
-                amount: 100, // changed to float if proto defines it as float/double?
+                amount: 100, // 若 proto 定义为浮点类型需同步调整
                 benchmark_id: "".to_string(),
             };
             let res: Result<_, _> = c.tx_client.create_transaction(req).await;
@@ -103,7 +103,7 @@ async fn test_grpc_integration() {
     assert!(avg_latency <= 200.0, "Submit latency too high");
     assert!(success_count >= 100, "Submit success rate too low");
 
-    // 4. Concurrent Load Test (get_block)
+    // 4. 并发压测 get_block 接口（100 并发）
     println!("Testing get_block with 100 concurrency...");
     let mut set = tokio::task::JoinSet::new();
 
@@ -140,9 +140,9 @@ async fn test_grpc_integration() {
 
     // assert!(avg_latency <= 200.0, "GetBlock latency too high");
     // assert!(success_count >= 100, "GetBlock success rate too low");
-    // Commenting out assertions for get_block as we can't guarantee data existence in empty server
+    // 由于空服务器中不一定存在区块数据，因此暂时注释掉 get_block 的断言
 
-    // 5. Cleanup
+    // 5. 清理测试使用的 Docker 容器
     let _ = Command::new("docker")
         .args(&["rm", "-f", "hcp-server-test"])
         .status();

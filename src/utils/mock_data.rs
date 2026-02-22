@@ -11,23 +11,23 @@ pub struct MockData {
     pub consensus_config: Value,
 }
 
-/// Load mock data from JSON file
+/// 从 JSON 文件加载网关所需的模拟数据
 pub async fn load_mock_data<P: AsRef<Path>>(
     path: P,
 ) -> Result<Option<MockData>, Box<dyn std::error::Error>> {
     let path = path.as_ref();
 
-    // Check if file exists
+    // 检查文件是否存在
     if !path.exists() {
         tracing::warn!("Mock data file not found at {:?}, using defaults", path);
         return Ok(None);
     }
 
-    // Read file
+    // 读取文件内容
     let content = fs::read_to_string(path).await?;
     let data: Value = serde_json::from_str(&content)?;
 
-    // Extract data sections
+    // 从整体 JSON 中拆分出各子模块的数据区域
     let algorithms = data
         .get("algorithms")
         .and_then(|v| v.as_array())
@@ -74,7 +74,7 @@ pub async fn load_mock_data<P: AsRef<Path>>(
     }))
 }
 
-/// Generate default mock data if file not found
+/// 当未找到外部文件时生成默认的模拟数据
 pub fn default_mock_data() -> MockData {
     tracing::info!("Using default mock data");
 

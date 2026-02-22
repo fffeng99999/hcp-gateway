@@ -6,7 +6,7 @@ use axum::{
 };
 use std::sync::Arc;
 
-// GET /blocks/:height
+// GET /blocks/:height 按区块高度查询区块详情
 pub async fn get_block(
     State(state): State<Arc<AppState>>,
     Path(height): Path<i64>,

@@ -9,7 +9,7 @@ use tokio::sync::RwLock;
 
 #[derive(Clone)]
 pub struct AppState {
-    // Consensus
+    // 共识相关状态
     pub algorithms: Arc<RwLock<Vec<ConsensusAlgorithm>>>,
     pub consensus_config: Arc<RwLock<ConsensusConfig>>,
     pub consensus_client: Option<ConsensusClient>,
@@ -17,27 +17,27 @@ pub struct AppState {
     pub consensus_healthy: Arc<AtomicBool>,
     pub server_healthy: Arc<AtomicBool>,
 
-    // Benchmarks
+    // 基准测试任务与当前运行中的基准测试 ID
     pub benchmarks: Arc<RwLock<Vec<BenchmarkResult>>>,
-    pub active_benchmark: Arc<RwLock<Option<String>>>, // ID of running benchmark
+    pub active_benchmark: Arc<RwLock<Option<String>>>,
 
-    // Transactions
+    // 交易列表
     pub transactions: Arc<RwLock<Vec<Transaction>>>,
 
-    // Nodes
+    // 节点信息
     pub nodes: Arc<RwLock<Vec<Node>>>,
 
-    // Performance
-    pub performance_history: Arc<RwLock<Vec<PerformanceMetrics>>>, // Simplified history
+    // 性能指标历史（简化版）
+    pub performance_history: Arc<RwLock<Vec<PerformanceMetrics>>>,
 
-    // Anti-Manipulation
+    // 反操纵配置与事件
     pub anti_manipulation_config: Arc<RwLock<AntiManipulationConfig>>,
     pub manipulation_events: Arc<RwLock<Vec<ManipulationEvent>>>,
 
-    // Analysis
+    // 分析报告
     pub analysis_reports: Arc<RwLock<Vec<AnalysisReport>>>,
 
-    // Settings
+    // 设置相关状态
     pub general_settings: Arc<RwLock<GeneralSettings>>,
     pub network_settings: Arc<RwLock<NetworkSettings>>,
     pub storage_settings: Arc<RwLock<StorageSettings>>,
@@ -46,6 +46,7 @@ pub struct AppState {
     pub backup_settings: Arc<RwLock<BackupSettings>>,
     pub users: Arc<RwLock<Vec<SystemUser>>>,
     pub backups: Arc<RwLock<Vec<BackupRecord>>>,
+    // 全局配置版本号，所有设置写操作会自增
     pub config_version: Arc<AtomicU64>,
 }
 
@@ -57,7 +58,7 @@ impl AppState {
         consensus_healthy: Arc<AtomicBool>,
         server_healthy: Arc<AtomicBool>,
     ) -> Self {
-        // Convert mock data to models
+        // 将从 JSON 中读取到的原始 MockData 转换为领域模型
         let algorithms: Vec<ConsensusAlgorithm> = mock_data
             .algorithms
             .into_iter()
@@ -132,7 +133,7 @@ impl AppState {
             } else {
                 algorithms
             })),
-            consensus_config: Arc::new(RwLock::new(consensus_config)), // Use loaded or default if empty (but check if empty is valid)
+            consensus_config: Arc::new(RwLock::new(consensus_config)), // 使用文件中的配置，如为空则回退到默认配置
             consensus_client,
             server_client,
             consensus_healthy,

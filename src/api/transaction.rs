@@ -7,7 +7,7 @@ use axum::{
 use base64::prelude::*;
 use std::sync::Arc;
 
-// POST /transactions/submit
+// POST /transactions/submit 提交交易到共识层
 pub async fn submit_transaction(
     State(state): State<Arc<AppState>>,
     Json(req): Json<TransactionSubmitRequest>,
@@ -21,8 +21,7 @@ pub async fn submit_transaction(
                 Err(_) => return Json(ApiResponse::error(400, "Invalid base64 tx_bytes")),
             }
         } else {
-            // Fallback: If payload is simple JSON, maybe serialize it?
-            // For now, require tx_bytes to be correct.
+            // 目前严格要求 payload 中必须包含经过 base64 编码的 tx_bytes
             return Json(ApiResponse::error(
                 400,
                 "Payload must contain 'tx_bytes' (base64 encoded Cosmos Tx)",
@@ -57,7 +56,7 @@ pub async fn submit_transaction(
     }
 }
 
-// GET /transactions/stats
+// GET /transactions/stats 获取交易统计信息
 pub async fn get_transaction_stats(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<serde_json::Value>> {
@@ -78,14 +77,14 @@ pub async fn get_transaction_stats(
         "pending": pending,
         "confirmed": confirmed,
         "failed": failed,
-        "pool_size": pending, // Assuming pool size is pending count
-        "avg_confirmation_time_ms": 2500 // Mock
+        "pool_size": pending, // 这里简化为将待确认数量视为交易池大小
+        "avg_confirmation_time_ms": 2500 // 模拟平均确认时间
     });
 
     Json(ApiResponse::success(stats))
 }
 
-// GET /transactions/pending
+// GET /transactions/pending 获取待确认交易列表
 pub async fn get_pending_transactions(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<Vec<Transaction>>> {
@@ -98,7 +97,7 @@ pub async fn get_pending_transactions(
     Json(ApiResponse::success(pending))
 }
 
-// GET /transactions/confirmed
+// GET /transactions/confirmed 获取已确认交易列表
 pub async fn get_confirmed_transactions(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<Vec<Transaction>>> {
@@ -111,7 +110,7 @@ pub async fn get_confirmed_transactions(
     Json(ApiResponse::success(confirmed))
 }
 
-// GET /transactions/query
+// GET /transactions/query 按条件查询交易列表
 pub async fn query_transactions(
     State(state): State<Arc<AppState>>,
     Query(params): Query<TransactionQueryParams>,
@@ -146,7 +145,7 @@ pub async fn query_transactions(
     Json(ApiResponse::success(filtered))
 }
 
-// GET /transactions/history (Alias for query)
+// GET /transactions/history 交易历史（query 的别名）
 pub async fn get_transaction_history(
     State(state): State<Arc<AppState>>,
     Query(params): Query<TransactionQueryParams>,
@@ -154,14 +153,14 @@ pub async fn get_transaction_history(
     query_transactions(State(state), Query(params)).await
 }
 
-// GET /transactions/status
+// GET /transactions/status 获取交易状态汇总信息
 pub async fn get_transaction_status(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<serde_json::Value>> {
     get_transaction_stats(State(state)).await
 }
 
-// GET /transactions/:id
+// GET /transactions/:id 获取单笔交易详情
 pub async fn get_transaction(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
@@ -174,7 +173,7 @@ pub async fn get_transaction(
     }
 }
 
-// POST /transactions/:id/cancel
+// POST /transactions/:id/cancel 取消指定交易（仅限待确认状态）
 pub async fn cancel_transaction(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,

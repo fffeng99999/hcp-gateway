@@ -11,7 +11,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 
 pub fn create_router(app_state: Arc<state::AppState>) -> Router {
-    // Protected API routes (require Auth header)
+    // 需要认证的受保护 API 路由
     let protected_routes = Router::new()
         // Consensus Module
         .nest(
@@ -22,7 +22,7 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
                 .route("/select", post(api::consensus::select_algorithm))
                 .route("/parameters", put(api::consensus::update_parameters)),
         )
-        // Benchmark Module
+        // 基准测试模块
         .nest(
             "/benchmarks",
             Router::new()
@@ -38,7 +38,7 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
                 .route("/:id/stop", post(api::benchmark::stop_benchmark))
                 .route("/:id/pause", post(api::benchmark::pause_benchmark)),
         )
-        // Node Module
+        // 节点管理模块
         .nest(
             "/nodes",
             Router::new()
@@ -56,7 +56,7 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
                 .route("/:id/fault", post(api::node::inject_fault))
                 .route("/:id/recover", post(api::node::recover_node)),
         )
-        // Transaction Module
+        // 交易模块
         .nest(
             "/transactions",
             Router::new()
@@ -72,12 +72,12 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
                 .route("/:id", get(api::transaction::get_transaction))
                 .route("/:id/cancel", post(api::transaction::cancel_transaction)),
         )
-        // Block Module
+        // 区块查询模块
         .nest(
             "/blocks",
             Router::new().route("/:height", get(api::block::get_block)),
         )
-        // Performance Module (HTTP endpoints)
+        // 性能指标 HTTP 接口模块
         .nest(
             "/performance",
             Router::new()
@@ -92,7 +92,7 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
                 .route("/export", post(api::performance::export_performance_data))
                 .route("/data", delete(api::performance::clear_data)),
         )
-        // Anti-Manipulation Module
+        // 反操纵模块
         .nest(
             "/anti-manipulation",
             Router::new()
@@ -107,7 +107,7 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
                     get(api::anti_manipulation::get_event_details),
                 ),
         )
-        // Analysis Module
+        // 分析与报告模块
         .nest(
             "/analysis",
             Router::new()
@@ -122,7 +122,7 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
                 .route("/limits/:algo", get(api::analysis::get_algo_limits))
                 .route("/export", post(api::analysis::export_analysis)),
         )
-        // Settings Module
+        // 设置模块
         .nest(
             "/settings",
             Router::new()
@@ -170,7 +170,7 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
         )
         .layer(from_fn(middleware::auth_middleware));
 
-    // Public API routes
+    // 公共 API 路由（登录、WebSocket、SSE 等）
     let api_routes = Router::new()
         .route("/auth/login", post(api::auth::login))
         .route("/performance", any(api::performance::ws_handler))
@@ -178,12 +178,12 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
         .merge(protected_routes);
 
     Router::new()
-        // Health check
+        // 健康检查
         .route("/health", get(api::health::health_check))
-        // API v1 (and default /api)
+        // API 入口，兼容 /api 与 /api/v1
         .nest("/api", api_routes.clone())
         .nest("/api/v1", api_routes)
-        // Middleware Stack
+        // 中间件栈：请求 ID、链路追踪、CORS、日志
         .layer(
             ServiceBuilder::new()
                 .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
@@ -210,7 +210,7 @@ mod tests {
     };
     use std::sync::atomic::AtomicBool;
     use std::sync::Arc;
-    use tower::Service; // Use Service trait directly
+    use tower::Service; // 直接使用 Service trait
 
     #[tokio::test]
     async fn test_health_check() {

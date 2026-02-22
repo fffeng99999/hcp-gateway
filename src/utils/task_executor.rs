@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// Simple task executor for parallel task processing
+/// 一个用于并行任务处理的简单任务执行器
 #[allow(dead_code)]
 pub struct TaskExecutor<T: Clone> {
     tasks: Arc<RwLock<HashMap<String, TaskStatus<T>>>>,
@@ -33,13 +33,13 @@ impl<T: Clone + Send + Sync + 'static> TaskExecutor<T> {
         let task_id_clone = task_id.clone();
         let tasks = self.tasks.clone();
 
-        // Mark task as running
+        // 将任务标记为运行中
         {
             let mut t = tasks.write().await;
             t.insert(task_id_clone.clone(), TaskStatus::Running);
         }
 
-        // Spawn task in background
+        // 在后台启动异步任务
         tokio::spawn(async move {
             let result = future.await;
             let mut t = tasks.write().await;

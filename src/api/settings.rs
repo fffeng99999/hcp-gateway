@@ -17,6 +17,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use uuid::Uuid;
 
+// 统一封装配置相关接口的响应，附带全局配置版本号头部
 fn respond_with_version<T>(
     state: &Arc<AppState>,
     body: ApiResponse<T>,
@@ -36,7 +37,7 @@ where
     (headers, Json(body))
 }
 
-// ================= General Settings =================
+// ================= 通用设置 =================
 
 pub async fn get_general(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let settings = state.general_settings.read().await;
@@ -56,7 +57,7 @@ pub async fn update_general(
     )
 }
 
-// ================= Network Settings =================
+// ================= 网络设置 =================
 
 pub async fn get_network(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let settings = state.network_settings.read().await;
@@ -76,7 +77,7 @@ pub async fn update_network(
     )
 }
 
-// ================= Storage Settings =================
+// ================= 存储设置 =================
 
 pub async fn get_storage(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let settings = state.storage_settings.read().await;
@@ -96,7 +97,7 @@ pub async fn update_storage(
     )
 }
 
-// ================= Security Settings =================
+// ================= 安全设置 =================
 
 pub async fn get_security(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let settings = state.security_settings.read().await;
@@ -116,7 +117,7 @@ pub async fn update_security(
     )
 }
 
-// ================= Notification Settings =================
+// ================= 通知设置 =================
 
 pub async fn get_notifications(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let settings = state.notification_settings.read().await;
@@ -136,7 +137,7 @@ pub async fn update_notifications(
     )
 }
 
-// ================= Backup Settings =================
+// ================= 备份设置 =================
 
 pub async fn get_backup(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let settings = state.backup_settings.read().await;
@@ -156,6 +157,7 @@ pub async fn update_backup(
     )
 }
 
+// 触发一次立即备份任务，并记录到内存备份列表中
 pub async fn trigger_backup(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let mut backups = state.backups.write().await;
     let backup_id = Uuid::new_v4().to_string();
@@ -166,7 +168,7 @@ pub async fn trigger_backup(State(state): State<Arc<AppState>>) -> impl IntoResp
             "backup_{}.tar.gz",
             chrono::Utc::now().format("%Y%m%d%H%M%S")
         ),
-        size_bytes: 1024 * 1024 * 50, // Mock size 50MB
+        size_bytes: 1024 * 1024 * 50, // 模拟备份文件大小约 50MB
         created_at: chrono::Utc::now().to_rfc3339(),
         status: "success".to_string(),
     });
@@ -178,11 +180,13 @@ pub async fn trigger_backup(State(state): State<Arc<AppState>>) -> impl IntoResp
     )
 }
 
+// 备份路径校验请求体
 #[derive(Deserialize)]
 pub struct BackupPathRequest {
     pub path: String,
 }
 
+// 校验备份路径是否为合法绝对目录路径，不做实际写入
 pub async fn validate_backup_path(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<BackupPathRequest>,
@@ -191,7 +195,7 @@ pub async fn validate_backup_path(
     if raw.is_empty() {
         return respond_with_version(
             &state,
-            ApiResponse::error(400, "Backup path is empty".to_string()),
+            ApiResponse::error(400, "备份路径不能为空".to_string()),
             false,
         );
     }
@@ -201,7 +205,7 @@ pub async fn validate_backup_path(
     if !path.is_absolute() {
         return respond_with_version(
             &state,
-            ApiResponse::error(400, "Backup path must be absolute".to_string()),
+            ApiResponse::error(400, "备份路径必须为绝对路径".to_string()),
             false,
         );
     }
@@ -217,7 +221,7 @@ pub async fn validate_backup_path(
     if !is_valid {
         return respond_with_version(
             &state,
-            ApiResponse::error(400, "Backup path is not a valid directory".to_string()),
+            ApiResponse::error(400, "备份路径不是有效的目录或目录不可用".to_string()),
             false,
         );
     }
@@ -231,19 +235,20 @@ pub async fn validate_backup_path(
     respond_with_version(&state, ApiResponse::success(result), false)
 }
 
+// 查询当前系统用户列表
 pub async fn get_users(State(state): State<Arc<AppState>>) -> Json<ApiResponse<Vec<SystemUser>>> {
     let users = state.users.read().await;
     Json(ApiResponse::success(users.clone()))
 }
 
-// POST /settings/users
+// 创建新用户，如果未提供 ID 则自动生成
 pub async fn create_user(
     State(state): State<Arc<AppState>>,
     Json(mut user): Json<SystemUser>,
 ) -> Json<ApiResponse<String>> {
     let mut users = state.users.write().await;
 
-    // Assign ID if not provided or empty
+    // 如果未提供 ID 或为空，则自动分配一个新的 UUID
     if user.id.is_empty() {
         user.id = Uuid::new_v4().to_string();
     }
@@ -253,7 +258,7 @@ pub async fn create_user(
     Json(ApiResponse::success("User created".to_string()))
 }
 
-// PUT /settings/users/:id
+// 根据 ID 更新已有用户的基础信息（不修改创建时间与 ID）
 pub async fn update_user(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
@@ -265,14 +270,14 @@ pub async fn update_user(
         user.username = user_update.username;
         user.role = user_update.role;
         user.email = user_update.email;
-        // Don't update created_at or id
+        // 不修改 created_at 与 id 字段，保持历史记录一致
         Json(ApiResponse::success("User updated".to_string()))
     } else {
         Json(ApiResponse::error(404, "User not found"))
     }
 }
 
-// DELETE /settings/users/:id
+// 根据 ID 删除用户，如果未找到则返回 404
 pub async fn delete_user(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,

@@ -6,9 +6,9 @@ use axum::{
 };
 use std::sync::Arc;
 
-// GET /nodes
+// GET /nodes 获取节点列表
 pub async fn list_nodes(State(state): State<Arc<AppState>>) -> Json<ApiResponse<Vec<Node>>> {
-    // Try to fetch from server first
+    // 优先尝试从后端服务（hcp-server）获取真实节点列表
     if let Some(client) = &state.server_client {
         let mut client = client.clone();
         let request = tonic::Request::new(crate::services::server_client::node::ListNodesRequest {
@@ -46,14 +46,14 @@ pub async fn list_nodes(State(state): State<Arc<AppState>>) -> Json<ApiResponse<
     Json(ApiResponse::success(nodes.clone()))
 }
 
-// GET /nodes/stats
+// GET /nodes/stats 获取节点统计信息
 pub async fn get_node_stats(State(state): State<Arc<AppState>>) -> Json<ApiResponse<NodeStats>> {
     let nodes = state.nodes.read().await;
     let total_count = nodes.len() as u32;
     let online_count = nodes.iter().filter(|n| n.status == "online").count() as u32;
     let offline_count = total_count - online_count;
 
-    // Mock latency calculation
+    // 简单模拟平均网络延迟计算
     let average_latency = if total_count > 0 {
         nodes.iter().map(|_| 15.5).sum::<f64>() / total_count as f64
     } else {
@@ -70,7 +70,7 @@ pub async fn get_node_stats(State(state): State<Arc<AppState>>) -> Json<ApiRespo
     Json(ApiResponse::success(stats))
 }
 
-// GET /nodes/health/all
+// GET /nodes/health/all 获取所有节点健康状态
 pub async fn get_all_nodes_health(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<Vec<serde_json::Value>>> {
@@ -89,7 +89,7 @@ pub async fn get_all_nodes_health(
     Json(ApiResponse::success(health_data))
 }
 
-// GET /nodes/:id
+// GET /nodes/:id 获取单个节点详情
 pub async fn get_node(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
@@ -102,7 +102,7 @@ pub async fn get_node(
     }
 }
 
-// GET /nodes/:id/health
+// GET /nodes/:id/health 获取单个节点的健康状态
 pub async fn get_node_health(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
@@ -124,7 +124,7 @@ pub async fn get_node_health(
     }
 }
 
-// POST /nodes/register
+// POST /nodes/register 注册新节点
 pub async fn register_node(
     State(state): State<Arc<AppState>>,
     Json(req): Json<NodeRegistrationRequest>,
@@ -145,7 +145,7 @@ pub async fn register_node(
     Json(ApiResponse::success(new_node))
 }
 
-// DELETE /nodes/:id
+// DELETE /nodes/:id 删除节点
 pub async fn remove_node(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
@@ -159,7 +159,7 @@ pub async fn remove_node(
     }
 }
 
-// POST /nodes/:id/inject-fault
+// POST /nodes/:id/inject-fault 对节点注入故障
 pub async fn inject_fault(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
@@ -167,7 +167,7 @@ pub async fn inject_fault(
 ) -> Json<ApiResponse<String>> {
     let mut nodes = state.nodes.write().await;
     if let Some(node) = nodes.iter_mut().find(|n| n.id == id) {
-        // Simulate fault injection logic
+        // 模拟故障注入逻辑
         if config.fault_type == "crash" {
             node.status = "offline".to_string();
             node.health_score = 0.0;
@@ -183,7 +183,7 @@ pub async fn inject_fault(
     }
 }
 
-// POST /nodes/:id/recover
+// POST /nodes/:id/recover 恢复指定节点
 pub async fn recover_node(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
