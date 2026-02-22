@@ -9,6 +9,11 @@ pub mod hcp {
             tonic::include_proto!("hcp.transaction.v1");
         }
     }
+    pub mod auth {
+        pub mod v1 {
+            tonic::include_proto!("hcp.auth.v1");
+        }
+    }
     pub mod block {
         pub mod v1 {
             tonic::include_proto!("hcp.block.v1");
@@ -33,10 +38,12 @@ pub mod hcp {
 
 pub use hcp::benchmark::v1 as benchmark;
 pub use hcp::block::v1 as block;
+pub use hcp::auth::v1 as auth;
 pub use hcp::metric::v1 as metric;
 pub use hcp::node::v1 as node;
 pub use hcp::transaction::v1 as transaction;
 
+use auth::auth_service_client::AuthServiceClient;
 use benchmark::benchmark_service_client::BenchmarkServiceClient;
 use block::block_service_client::BlockServiceClient;
 use metric::metric_service_client::MetricServiceClient;
@@ -56,6 +63,7 @@ pub struct ServerClient {
     pub benchmark_client: BenchmarkServiceClient<Channel>,
     pub metric_client: MetricServiceClient<Channel>,
     pub node_client: NodeServiceClient<Channel>,
+    pub auth_client: AuthServiceClient<Channel>,
     pub healthy: Arc<AtomicBool>,
 }
 
@@ -77,6 +85,8 @@ impl ServerClient {
             .max_decoding_message_size(16 * 1024 * 1024);
         let metric_client =
             MetricServiceClient::new(channel.clone()).max_decoding_message_size(16 * 1024 * 1024);
+        let auth_client =
+            AuthServiceClient::new(channel.clone()).max_decoding_message_size(16 * 1024 * 1024);
         let node_client =
             NodeServiceClient::new(channel).max_decoding_message_size(16 * 1024 * 1024);
 
@@ -86,6 +96,7 @@ impl ServerClient {
             benchmark_client,
             metric_client,
             node_client,
+            auth_client,
             healthy,
         })
     }

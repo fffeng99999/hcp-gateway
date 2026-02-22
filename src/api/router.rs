@@ -177,6 +177,10 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
                 .route("/user/validate", post(api::settings::validate_user))
                 .route("/system", get(api::settings::get_system_info)),
         )
+        // 用户认证与个人信息（需要登录）
+        .route("/auth/me", get(api::auth::me))
+        .route("/auth/profile", put(api::auth::update_profile))
+        .route("/auth/change-password", post(api::auth::change_password))
         .layer(from_fn(middleware::auth_middleware));
 
     // 公共 API 路由（登录、WebSocket、SSE 等）

@@ -5,6 +5,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build_client(true)
         .compile_protos(
             &[
+                "../hcp-server/api/proto/auth.proto",
                 "../hcp-server/api/proto/transaction.proto",
                 "../hcp-server/api/proto/block.proto",
                 "../hcp-server/api/proto/common.proto",
