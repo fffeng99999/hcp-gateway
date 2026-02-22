@@ -1,7 +1,7 @@
-use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
-use chrono::{Utc, Duration};
-use crate::models::{Claims, SystemUser};
 use crate::common::error::AppError;
+use crate::models::{Claims, SystemUser};
+use chrono::{Duration, Utc};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 
 const JWT_SECRET: &[u8] = b"hcp_secret_key_change_me";
 
@@ -17,8 +17,12 @@ pub fn create_token(user: &SystemUser) -> Result<String, AppError> {
         exp: expiration as usize,
     };
 
-    encode(&Header::default(), &claims, &EncodingKey::from_secret(JWT_SECRET))
-        .map_err(|e| AppError::InternalError(format!("Token creation failed: {}", e)))
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(JWT_SECRET),
+    )
+    .map_err(|e| AppError::InternalError(format!("Token creation failed: {}", e)))
 }
 
 pub fn verify_token(token: &str) -> Result<Claims, AppError> {

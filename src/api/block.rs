@@ -1,5 +1,5 @@
-use crate::models::ApiResponse;
 use crate::common::state::AppState;
+use crate::models::ApiResponse;
 use axum::{
     extract::{Path, State},
     Json,

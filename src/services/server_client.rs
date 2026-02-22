@@ -31,23 +31,23 @@ pub mod hcp {
     }
 }
 
-pub use hcp::transaction::v1 as transaction;
-pub use hcp::block::v1 as block;
 pub use hcp::benchmark::v1 as benchmark;
+pub use hcp::block::v1 as block;
 pub use hcp::metric::v1 as metric;
 pub use hcp::node::v1 as node;
+pub use hcp::transaction::v1 as transaction;
 
-use transaction::transaction_service_client::TransactionServiceClient;
-use block::block_service_client::BlockServiceClient;
 use benchmark::benchmark_service_client::BenchmarkServiceClient;
+use block::block_service_client::BlockServiceClient;
 use metric::metric_service_client::MetricServiceClient;
 use node::node_service_client::NodeServiceClient;
+use transaction::transaction_service_client::TransactionServiceClient;
 
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+use std::time::Duration;
 use tonic::transport::Channel;
 use tonic::transport::Endpoint;
-use std::time::Duration;
-use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 
 #[derive(Clone)]
 pub struct ServerClient {
@@ -60,30 +60,33 @@ pub struct ServerClient {
 }
 
 impl ServerClient {
-    pub async fn connect(endpoint: String, healthy: Arc<AtomicBool>) -> Result<Self, tonic::transport::Error> {
+    pub async fn connect(
+        endpoint: String,
+        healthy: Arc<AtomicBool>,
+    ) -> Result<Self, tonic::transport::Error> {
         let channel = Endpoint::from_shared(endpoint)?
             .connect_timeout(Duration::from_secs(5))
             .connect()
             .await?;
-        
+
         let tx_client = TransactionServiceClient::new(channel.clone())
             .max_decoding_message_size(16 * 1024 * 1024);
-        let block_client = BlockServiceClient::new(channel.clone())
-            .max_decoding_message_size(16 * 1024 * 1024);
+        let block_client =
+            BlockServiceClient::new(channel.clone()).max_decoding_message_size(16 * 1024 * 1024);
         let benchmark_client = BenchmarkServiceClient::new(channel.clone())
             .max_decoding_message_size(16 * 1024 * 1024);
-        let metric_client = MetricServiceClient::new(channel.clone())
-            .max_decoding_message_size(16 * 1024 * 1024);
-        let node_client = NodeServiceClient::new(channel)
-            .max_decoding_message_size(16 * 1024 * 1024);
-            
-        Ok(Self { 
-            tx_client, 
-            block_client, 
-            benchmark_client, 
-            metric_client, 
-            node_client, 
-            healthy 
+        let metric_client =
+            MetricServiceClient::new(channel.clone()).max_decoding_message_size(16 * 1024 * 1024);
+        let node_client =
+            NodeServiceClient::new(channel).max_decoding_message_size(16 * 1024 * 1024);
+
+        Ok(Self {
+            tx_client,
+            block_client,
+            benchmark_client,
+            metric_client,
+            node_client,
+            healthy,
         })
     }
 }

@@ -1,11 +1,11 @@
-use crate::models::{ApiResponse, Transaction, TransactionSubmitRequest, TransactionQueryParams};
 use crate::common::state::AppState;
+use crate::models::{ApiResponse, Transaction, TransactionQueryParams, TransactionSubmitRequest};
 use axum::{
     extract::{Path, Query, State},
     Json,
 };
-use std::sync::Arc;
 use base64::prelude::*;
+use std::sync::Arc;
 
 // POST /transactions/submit
 pub async fn submit_transaction(
@@ -14,28 +14,40 @@ pub async fn submit_transaction(
 ) -> Json<ApiResponse<String>> {
     if let Some(client_ref) = &state.consensus_client {
         let mut client = client_ref.clone();
-        
+
         let tx_bytes = if let Some(b64) = req.payload.get("tx_bytes").and_then(|v| v.as_str()) {
             match BASE64_STANDARD.decode(b64) {
                 Ok(b) => b,
                 Err(_) => return Json(ApiResponse::error(400, "Invalid base64 tx_bytes")),
             }
         } else {
-            // Fallback: If payload is simple JSON, maybe serialize it? 
+            // Fallback: If payload is simple JSON, maybe serialize it?
             // For now, require tx_bytes to be correct.
-            return Json(ApiResponse::error(400, "Payload must contain 'tx_bytes' (base64 encoded Cosmos Tx)"));
+            return Json(ApiResponse::error(
+                400,
+                "Payload must contain 'tx_bytes' (base64 encoded Cosmos Tx)",
+            ));
         };
 
         match client.broadcast_tx(tx_bytes).await {
             Ok(resp) => {
                 if let Some(tx_resp) = resp.tx_response {
                     if tx_resp.code == 0 {
-                         Json(ApiResponse::success(format!("Transaction submitted. Hash: {}", tx_resp.txhash)))
+                        Json(ApiResponse::success(format!(
+                            "Transaction submitted. Hash: {}",
+                            tx_resp.txhash
+                        )))
                     } else {
-                         Json(ApiResponse::error(400, format!("CheckTx failed: Code {}, Log: {}", tx_resp.code, tx_resp.raw_log)))
+                        Json(ApiResponse::error(
+                            400,
+                            format!(
+                                "CheckTx failed: Code {}, Log: {}",
+                                tx_resp.code, tx_resp.raw_log
+                            ),
+                        ))
                     }
                 } else {
-                     Json(ApiResponse::error(500, "Empty response from consensus"))
+                    Json(ApiResponse::error(500, "Empty response from consensus"))
                 }
             }
             Err(e) => Json(ApiResponse::error(500, format!("gRPC error: {}", e))),
@@ -51,10 +63,16 @@ pub async fn get_transaction_stats(
 ) -> Json<ApiResponse<serde_json::Value>> {
     let transactions = state.transactions.read().await;
     let total = transactions.len();
-    let pending = transactions.iter().filter(|t| t.status == "pending").count();
-    let confirmed = transactions.iter().filter(|t| t.status == "confirmed").count();
+    let pending = transactions
+        .iter()
+        .filter(|t| t.status == "pending")
+        .count();
+    let confirmed = transactions
+        .iter()
+        .filter(|t| t.status == "confirmed")
+        .count();
     let failed = transactions.iter().filter(|t| t.status == "failed").count();
-    
+
     let stats = serde_json::json!({
         "total": total,
         "pending": pending,
@@ -63,7 +81,7 @@ pub async fn get_transaction_stats(
         "pool_size": pending, // Assuming pool size is pending count
         "avg_confirmation_time_ms": 2500 // Mock
     });
-    
+
     Json(ApiResponse::success(stats))
 }
 
@@ -72,7 +90,8 @@ pub async fn get_pending_transactions(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<Vec<Transaction>>> {
     let transactions = state.transactions.read().await;
-    let pending: Vec<Transaction> = transactions.iter()
+    let pending: Vec<Transaction> = transactions
+        .iter()
         .filter(|t| t.status == "pending")
         .cloned()
         .collect();
@@ -84,7 +103,8 @@ pub async fn get_confirmed_transactions(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<Vec<Transaction>>> {
     let transactions = state.transactions.read().await;
-    let confirmed: Vec<Transaction> = transactions.iter()
+    let confirmed: Vec<Transaction> = transactions
+        .iter()
         .filter(|t| t.status == "confirmed")
         .cloned()
         .collect();
@@ -97,17 +117,24 @@ pub async fn query_transactions(
     Query(params): Query<TransactionQueryParams>,
 ) -> Json<ApiResponse<Vec<Transaction>>> {
     let transactions = state.transactions.read().await;
-    
-    let filtered: Vec<Transaction> = transactions.iter()
+
+    let filtered: Vec<Transaction> = transactions
+        .iter()
         .filter(|t| {
             if let Some(ref status) = params.status {
-                if &t.status != status { return false; }
+                if &t.status != status {
+                    return false;
+                }
             }
             if let Some(ref from) = params.from {
-                if &t.from != from { return false; }
+                if &t.from != from {
+                    return false;
+                }
             }
             if let Some(ref to) = params.to {
-                if &t.to != to { return false; }
+                if &t.to != to {
+                    return false;
+                }
             }
             true
         })
@@ -115,7 +142,7 @@ pub async fn query_transactions(
         .take(params.limit.unwrap_or(10))
         .cloned()
         .collect();
-        
+
     Json(ApiResponse::success(filtered))
 }
 
@@ -158,7 +185,10 @@ pub async fn cancel_transaction(
             tx.status = "cancelled".to_string();
             Json(ApiResponse::success("Transaction cancelled".to_string()))
         } else {
-            Json(ApiResponse::error(400, "Cannot cancel non-pending transaction"))
+            Json(ApiResponse::error(
+                400,
+                "Cannot cancel non-pending transaction",
+            ))
         }
     } else {
         Json(ApiResponse::error(404, "Transaction not found"))

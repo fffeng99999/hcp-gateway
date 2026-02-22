@@ -16,7 +16,7 @@ pub async fn load_mock_data<P: AsRef<Path>>(
     path: P,
 ) -> Result<Option<MockData>, Box<dyn std::error::Error>> {
     let path = path.as_ref();
-    
+
     // Check if file exists
     if !path.exists() {
         tracing::warn!("Mock data file not found at {:?}, using defaults", path);

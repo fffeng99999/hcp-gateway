@@ -1,7 +1,5 @@
-use crate::models::{
-    ApiResponse, BenchmarkResult, CreateBenchmarkParams, PerformanceMetrics
-};
 use crate::common::state::AppState;
+use crate::models::{ApiResponse, BenchmarkResult, CreateBenchmarkParams, PerformanceMetrics};
 use axum::{
     extract::{Path, State},
     Json,
@@ -22,7 +20,7 @@ pub async fn create_benchmark(
     Json(params): Json<CreateBenchmarkParams>,
 ) -> Json<ApiResponse<BenchmarkResult>> {
     let mut benchmarks = state.benchmarks.write().await;
-    
+
     let new_benchmark = BenchmarkResult {
         benchmark_id: uuid::Uuid::new_v4().to_string(),
         algorithm_id: params.config.algorithm_id,
@@ -31,7 +29,7 @@ pub async fn create_benchmark(
         metrics: PerformanceMetrics::default(),
         status: "pending".to_string(),
     };
-    
+
     benchmarks.push(new_benchmark.clone());
     Json(ApiResponse::success(new_benchmark))
 }
@@ -56,20 +54,23 @@ pub async fn start_benchmark(
 ) -> Json<ApiResponse<String>> {
     let mut active = state.active_benchmark.write().await;
     if active.is_some() {
-        return Json(ApiResponse::error(409, "Another benchmark is already running"));
+        return Json(ApiResponse::error(
+            409,
+            "Another benchmark is already running",
+        ));
     }
 
     let mut benchmarks = state.benchmarks.write().await;
     if let Some(bench) = benchmarks.iter_mut().find(|b| b.benchmark_id == id) {
         if bench.status == "running" {
-             return Json(ApiResponse::error(400, "Benchmark is already running"));
+            return Json(ApiResponse::error(400, "Benchmark is already running"));
         }
-        
+
         bench.status = "running".to_string();
         bench.start_time = chrono::Utc::now().to_rfc3339();
         bench.end_time = None;
         *active = Some(id.clone());
-        
+
         Json(ApiResponse::success("Benchmark started".to_string()))
     } else {
         Json(ApiResponse::error(404, "Benchmark not found"))
@@ -83,21 +84,21 @@ pub async fn stop_benchmark(
 ) -> Json<ApiResponse<String>> {
     let mut active = state.active_benchmark.write().await;
     let mut benchmarks = state.benchmarks.write().await;
-    
+
     if let Some(bench) = benchmarks.iter_mut().find(|b| b.benchmark_id == id) {
         if bench.status != "running" && bench.status != "paused" {
-             return Json(ApiResponse::error(400, "Benchmark is not running"));
+            return Json(ApiResponse::error(400, "Benchmark is not running"));
         }
-        
+
         bench.status = "stopped".to_string();
         bench.end_time = Some(chrono::Utc::now().to_rfc3339());
-        
+
         if let Some(active_id) = &*active {
             if active_id == &id {
                 *active = None;
             }
         }
-        
+
         Json(ApiResponse::success("Benchmark stopped".to_string()))
     } else {
         Json(ApiResponse::error(404, "Benchmark not found"))
@@ -110,12 +111,12 @@ pub async fn pause_benchmark(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<String>> {
     let mut benchmarks = state.benchmarks.write().await;
-    
+
     if let Some(bench) = benchmarks.iter_mut().find(|b| b.benchmark_id == id) {
         if bench.status != "running" {
-             return Json(ApiResponse::error(400, "Benchmark is not running"));
+            return Json(ApiResponse::error(400, "Benchmark is not running"));
         }
-        
+
         bench.status = "paused".to_string();
         Json(ApiResponse::success("Benchmark paused".to_string()))
     } else {
@@ -129,7 +130,7 @@ pub async fn delete_benchmark(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<String>> {
     let mut benchmarks = state.benchmarks.write().await;
-    
+
     if let Some(pos) = benchmarks.iter().position(|b| b.benchmark_id == id) {
         benchmarks.remove(pos);
         Json(ApiResponse::success("Benchmark deleted".to_string()))
@@ -137,4 +138,3 @@ pub async fn delete_benchmark(
         Json(ApiResponse::error(404, "Benchmark not found"))
     }
 }
-

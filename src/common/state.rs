@@ -1,10 +1,10 @@
 use crate::models::*;
-use crate::utils::mock_data::MockData;
 use crate::services::consensus_client::ConsensusClient;
 use crate::services::server_client::ServerClient;
+use crate::utils::mock_data::MockData;
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 use tokio::sync::RwLock;
 
 #[derive(Clone)]
@@ -16,27 +16,27 @@ pub struct AppState {
     pub server_client: Option<ServerClient>,
     pub consensus_healthy: Arc<AtomicBool>,
     pub server_healthy: Arc<AtomicBool>,
-    
+
     // Benchmarks
     pub benchmarks: Arc<RwLock<Vec<BenchmarkResult>>>,
     pub active_benchmark: Arc<RwLock<Option<String>>>, // ID of running benchmark
-    
+
     // Transactions
     pub transactions: Arc<RwLock<Vec<Transaction>>>,
-    
+
     // Nodes
     pub nodes: Arc<RwLock<Vec<Node>>>,
-    
+
     // Performance
     pub performance_history: Arc<RwLock<Vec<PerformanceMetrics>>>, // Simplified history
-    
+
     // Anti-Manipulation
     pub anti_manipulation_config: Arc<RwLock<AntiManipulationConfig>>,
     pub manipulation_events: Arc<RwLock<Vec<ManipulationEvent>>>,
-    
+
     // Analysis
     pub analysis_reports: Arc<RwLock<Vec<AnalysisReport>>>,
-    
+
     // Settings
     pub general_settings: Arc<RwLock<GeneralSettings>>,
     pub network_settings: Arc<RwLock<NetworkSettings>>,
@@ -46,82 +46,114 @@ pub struct AppState {
     pub backup_settings: Arc<RwLock<BackupSettings>>,
     pub users: Arc<RwLock<Vec<SystemUser>>>,
     pub backups: Arc<RwLock<Vec<BackupRecord>>>,
+    pub config_version: Arc<AtomicU64>,
 }
 
 impl AppState {
     pub fn new(
-        mock_data: MockData, 
-        consensus_client: Option<ConsensusClient>, 
+        mock_data: MockData,
+        consensus_client: Option<ConsensusClient>,
         server_client: Option<ServerClient>,
         consensus_healthy: Arc<AtomicBool>,
-        server_healthy: Arc<AtomicBool>
+        server_healthy: Arc<AtomicBool>,
     ) -> Self {
         // Convert mock data to models
-        let algorithms: Vec<ConsensusAlgorithm> = mock_data.algorithms.into_iter().map(|v| {
-            serde_json::from_value(v).unwrap_or(ConsensusAlgorithm {
-                id: "unknown".to_string(),
-                name: "Unknown".to_string(),
-                description: "".to_string(),
-                category: "".to_string(),
+        let algorithms: Vec<ConsensusAlgorithm> = mock_data
+            .algorithms
+            .into_iter()
+            .map(|v| {
+                serde_json::from_value(v).unwrap_or(ConsensusAlgorithm {
+                    id: "unknown".to_string(),
+                    name: "Unknown".to_string(),
+                    description: "".to_string(),
+                    category: "".to_string(),
+                })
             })
-        }).collect();
+            .collect();
 
-        let benchmarks: Vec<BenchmarkResult> = mock_data.benchmarks.into_iter().map(|v| {
-            serde_json::from_value(v).unwrap_or(BenchmarkResult {
-                benchmark_id: "unknown".to_string(),
-                algorithm_id: "".to_string(),
-                start_time: "".to_string(),
-                end_time: None,
-                metrics: PerformanceMetrics::default(),
-                status: "failed".to_string(),
+        let benchmarks: Vec<BenchmarkResult> = mock_data
+            .benchmarks
+            .into_iter()
+            .map(|v| {
+                serde_json::from_value(v).unwrap_or(BenchmarkResult {
+                    benchmark_id: "unknown".to_string(),
+                    algorithm_id: "".to_string(),
+                    start_time: "".to_string(),
+                    end_time: None,
+                    metrics: PerformanceMetrics::default(),
+                    status: "failed".to_string(),
+                })
             })
-        }).collect();
+            .collect();
 
-        let transactions: Vec<Transaction> = mock_data.transactions.into_iter().map(|v| {
-            serde_json::from_value(v).unwrap_or(Transaction {
-                id: "unknown".to_string(),
-                from: "".to_string(),
-                to: "".to_string(),
-                amount: 0.0,
-                status: "failed".to_string(),
-                timestamp: "".to_string(),
-                block_height: None,
+        let transactions: Vec<Transaction> = mock_data
+            .transactions
+            .into_iter()
+            .map(|v| {
+                serde_json::from_value(v).unwrap_or(Transaction {
+                    id: "unknown".to_string(),
+                    from: "".to_string(),
+                    to: "".to_string(),
+                    amount: 0.0,
+                    status: "failed".to_string(),
+                    timestamp: "".to_string(),
+                    block_height: None,
+                })
             })
-        }).collect();
+            .collect();
 
-        let nodes: Vec<Node> = mock_data.nodes.into_iter().map(|v| {
-            serde_json::from_value(v).unwrap_or(Node {
-                id: "unknown".to_string(),
-                name: "Unknown".to_string(),
-                address: "".to_string(),
-                status: "offline".to_string(),
-                role: "unknown".to_string(),
-                last_heartbeat: "".to_string(),
-                health_score: 0.0,
+        let nodes: Vec<Node> = mock_data
+            .nodes
+            .into_iter()
+            .map(|v| {
+                serde_json::from_value(v).unwrap_or(Node {
+                    id: "unknown".to_string(),
+                    name: "Unknown".to_string(),
+                    address: "".to_string(),
+                    status: "offline".to_string(),
+                    role: "unknown".to_string(),
+                    last_heartbeat: "".to_string(),
+                    health_score: 0.0,
+                })
             })
-        }).collect();
+            .collect();
 
-        let consensus_config = serde_json::from_value(mock_data.consensus_config).unwrap_or(ConsensusConfig {
-            current_algorithm: "tPBFT".to_string(),
-            parameters: HashMap::new(),
-            is_active: true,
-            last_updated: "".to_string(),
-        });
+        let consensus_config =
+            serde_json::from_value(mock_data.consensus_config).unwrap_or(ConsensusConfig {
+                current_algorithm: "tPBFT".to_string(),
+                parameters: HashMap::new(),
+                is_active: true,
+                last_updated: "".to_string(),
+            });
 
         AppState {
-            algorithms: Arc::new(RwLock::new(if algorithms.is_empty() { Self::default_algorithms() } else { algorithms })),
+            algorithms: Arc::new(RwLock::new(if algorithms.is_empty() {
+                Self::default_algorithms()
+            } else {
+                algorithms
+            })),
             consensus_config: Arc::new(RwLock::new(consensus_config)), // Use loaded or default if empty (but check if empty is valid)
             consensus_client,
             server_client,
             consensus_healthy,
             server_healthy,
-            
+
             benchmarks: Arc::new(RwLock::new(benchmarks)),
             active_benchmark: Arc::new(RwLock::new(None)),
-            transactions: Arc::new(RwLock::new(if transactions.is_empty() { Self::default_transactions() } else { transactions })),
-            nodes: Arc::new(RwLock::new(if nodes.is_empty() { Self::default_nodes() } else { nodes })),
+            transactions: Arc::new(RwLock::new(if transactions.is_empty() {
+                Self::default_transactions()
+            } else {
+                transactions
+            })),
+            nodes: Arc::new(RwLock::new(if nodes.is_empty() {
+                Self::default_nodes()
+            } else {
+                nodes
+            })),
             performance_history: Arc::new(RwLock::new(Vec::new())),
-            anti_manipulation_config: Arc::new(RwLock::new(Self::default_anti_manipulation_config())),
+            anti_manipulation_config: Arc::new(RwLock::new(
+                Self::default_anti_manipulation_config(),
+            )),
             manipulation_events: Arc::new(RwLock::new(Vec::new())),
             analysis_reports: Arc::new(RwLock::new(Vec::new())),
             general_settings: Arc::new(RwLock::new(Self::default_general_settings())),
@@ -132,6 +164,7 @@ impl AppState {
             backup_settings: Arc::new(RwLock::new(Self::default_backup_settings())),
             users: Arc::new(RwLock::new(Self::default_users())),
             backups: Arc::new(RwLock::new(Vec::new())),
+            config_version: Arc::new(AtomicU64::new(1)),
         }
     }
 
@@ -217,10 +250,10 @@ impl AppState {
         let mut strategies = HashMap::new();
         strategies.insert("front_running_detection".to_string(), true);
         strategies.insert("wash_trading_detection".to_string(), true);
-        
+
         let mut thresholds = HashMap::new();
         thresholds.insert("high_frequency_threshold".to_string(), 100.0);
-        
+
         AntiManipulationConfig {
             strategies,
             thresholds,
@@ -275,16 +308,14 @@ impl AppState {
     }
 
     fn default_users() -> Vec<SystemUser> {
-        vec![
-            SystemUser {
-                id: "user_admin".to_string(),
-                username: "admin".to_string(),
-                role: "admin".to_string(),
-                email: "admin@hcp.com".to_string(),
-                created_at: chrono::Utc::now().to_rfc3339(),
-                status: "active".to_string(),
-                last_login: None,
-            },
-        ]
+        vec![SystemUser {
+            id: "user_admin".to_string(),
+            username: "admin".to_string(),
+            role: "admin".to_string(),
+            email: "admin@hcp.com".to_string(),
+            created_at: chrono::Utc::now().to_rfc3339(),
+            status: "active".to_string(),
+            last_login: None,
+        }]
     }
 }

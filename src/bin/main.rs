@@ -1,11 +1,6 @@
-use hcp_gateway::{
-    config, 
-    utils::mock_data as data, 
-    api::router, 
-    common::state,
-};
 use hcp_gateway::services::consensus_client::ConsensusClient;
 use hcp_gateway::services::server_client::ServerClient;
+use hcp_gateway::{api::router, common::state, config, utils::mock_data as data};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
@@ -32,17 +27,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize Consensus Client (Direct to Cosmos/CometBFT)
     let consensus_grpc_addr = std::env::var("HCP_CONSENSUS_GRPC_ADDR")
         .unwrap_or_else(|_| "http://127.0.0.1:9090".to_string());
-    
+
     let consensus_healthy = Arc::new(AtomicBool::new(true));
-    
+
     tracing::info!("Connecting to Consensus Service at {}", consensus_grpc_addr);
-    let consensus_client = match ConsensusClient::connect(consensus_grpc_addr.clone(), consensus_healthy.clone()).await {
+    let consensus_client = match ConsensusClient::connect(
+        consensus_grpc_addr.clone(),
+        consensus_healthy.clone(),
+    )
+    .await
+    {
         Ok(client) => {
             tracing::info!("Connected to Consensus Service");
             Some(client)
-        },
+        }
         Err(e) => {
-            tracing::error!("Failed to connect to Consensus Service at {}: {}", consensus_grpc_addr, e);
+            tracing::error!(
+                "Failed to connect to Consensus Service at {}: {}",
+                consensus_grpc_addr,
+                e
+            );
             consensus_healthy.store(false, std::sync::atomic::Ordering::SeqCst);
             None
         }
@@ -55,25 +59,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let server_healthy = Arc::new(AtomicBool::new(true));
 
     tracing::info!("Connecting to Backend Server at {}", server_grpc_addr);
-    let server_client = match ServerClient::connect(server_grpc_addr.clone(), server_healthy.clone()).await {
-        Ok(client) => {
-             tracing::info!("Connected to Backend Server");
-             Some(client)
-        },
-        Err(e) => {
-            tracing::error!("Failed to connect to Backend Server at {}: {}", server_grpc_addr, e);
-            server_healthy.store(false, std::sync::atomic::Ordering::SeqCst);
-            None
-        }
-    };
+    let server_client =
+        match ServerClient::connect(server_grpc_addr.clone(), server_healthy.clone()).await {
+            Ok(client) => {
+                tracing::info!("Connected to Backend Server");
+                Some(client)
+            }
+            Err(e) => {
+                tracing::error!(
+                    "Failed to connect to Backend Server at {}: {}",
+                    server_grpc_addr,
+                    e
+                );
+                server_healthy.store(false, std::sync::atomic::Ordering::SeqCst);
+                None
+            }
+        };
 
     // Initialize application state (mock data included)
     let app_state = Arc::new(state::AppState::new(
-        mock_data, 
-        consensus_client, 
-        server_client, 
+        mock_data,
+        consensus_client,
+        server_client,
         consensus_healthy,
-        server_healthy
+        server_healthy,
     ));
 
     // Load configuration

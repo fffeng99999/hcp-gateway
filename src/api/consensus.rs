@@ -1,14 +1,11 @@
-use crate::models::{
-    ApiResponse, ConsensusAlgorithm, ConsensusConfig, SelectAlgorithmRequest, 
-    UpdateParametersRequest
-};
-use crate::common::state::AppState;
-use crate::common::error::{AppError, AppResult};
 use crate::api::extractors::ValidatedJson;
-use axum::{
-    extract::State,
-    Json,
+use crate::common::error::{AppError, AppResult};
+use crate::common::state::AppState;
+use crate::models::{
+    ApiResponse, ConsensusAlgorithm, ConsensusConfig, SelectAlgorithmRequest,
+    UpdateParametersRequest,
 };
+use axum::{extract::State, Json};
 use std::sync::Arc;
 
 // GET /consensus/algorithms
@@ -20,9 +17,7 @@ pub async fn get_algorithms(
 }
 
 // GET /consensus/config
-pub async fn get_config(
-    State(state): State<Arc<AppState>>,
-) -> AppResult<ConsensusConfig> {
+pub async fn get_config(State(state): State<Arc<AppState>>) -> AppResult<ConsensusConfig> {
     let config = state.consensus_config.read().await;
     Ok(Json(ApiResponse::success(config.clone())))
 }
@@ -33,17 +28,20 @@ pub async fn select_algorithm(
     ValidatedJson(req): ValidatedJson<SelectAlgorithmRequest>,
 ) -> AppResult<String> {
     let mut config = state.consensus_config.write().await;
-    
+
     // Check if algorithm exists
     let algorithms = state.algorithms.read().await;
     if !algorithms.iter().any(|a| a.id == req.algorithm_id) {
-        return Err(AppError::InvalidInput(format!("Algorithm {} not found", req.algorithm_id)));
+        return Err(AppError::InvalidInput(format!(
+            "Algorithm {} not found",
+            req.algorithm_id
+        )));
     }
 
     config.current_algorithm = req.algorithm_id;
     config.parameters = req.parameters;
     config.last_updated = chrono::Utc::now().to_rfc3339();
-    
+
     Ok(Json(ApiResponse::success("Algorithm selected".to_string())))
 }
 
@@ -53,7 +51,7 @@ pub async fn update_parameters(
     ValidatedJson(req): ValidatedJson<UpdateParametersRequest>,
 ) -> AppResult<String> {
     let mut config = state.consensus_config.write().await;
-    
+
     if config.current_algorithm == req.algorithm_id {
         config.parameters.insert(req.param_name, req.value);
         config.last_updated = chrono::Utc::now().to_rfc3339();

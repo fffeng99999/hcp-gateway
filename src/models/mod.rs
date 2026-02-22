@@ -165,14 +165,14 @@ pub struct NodeRegistrationRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PerformanceMetrics {
-    pub throughput: f64,      // TPS
-    pub latency: f64,         // ms
+    pub throughput: f64, // TPS
+    pub latency: f64,    // ms
     pub latency_p99: f64,
     pub latency_p999: f64,
-    pub finality_time: f64,   // ms
+    pub finality_time: f64,     // ms
     pub network_bandwidth: f64, // Mbps
-    pub cpu_usage: f64,       // %
-    pub memory_usage: f64,    // MB
+    pub cpu_usage: f64,         // %
+    pub memory_usage: f64,      // MB
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
@@ -235,7 +235,7 @@ pub struct ManipulationEvent {
     pub id: String,
     pub event_type: String, // front_running, wash_trading, etc.
     pub timestamp: String,
-    pub severity: String,   // low, medium, high
+    pub severity: String, // low, medium, high
     pub details: serde_json::Value,
 }
 

@@ -1,5 +1,5 @@
-use crate::models::{ApiResponse, Node, NodeStats, NodeRegistrationRequest, FaultInjectionConfig};
 use crate::common::state::AppState;
+use crate::models::{ApiResponse, FaultInjectionConfig, Node, NodeRegistrationRequest, NodeStats};
 use axum::{
     extract::{Path, State},
     Json,
@@ -7,9 +7,7 @@ use axum::{
 use std::sync::Arc;
 
 // GET /nodes
-pub async fn list_nodes(
-    State(state): State<Arc<AppState>>,
-) -> Json<ApiResponse<Vec<Node>>> {
+pub async fn list_nodes(State(state): State<Arc<AppState>>) -> Json<ApiResponse<Vec<Node>>> {
     // Try to fetch from server first
     if let Some(client) = &state.server_client {
         let mut client = client.clone();
@@ -19,21 +17,25 @@ pub async fn list_nodes(
             region: "".to_string(),
             pagination: None,
         });
-        
+
         match client.node_client.list_nodes(request).await {
             Ok(response) => {
                 let resp = response.into_inner();
-                let nodes: Vec<Node> = resp.nodes.into_iter().map(|n| Node {
-                    id: n.id,
-                    name: n.name,
-                    address: n.address,
-                    status: n.status,
-                    role: n.role,
-                    last_heartbeat: n.last_heartbeat,
-                    health_score: n.trust_score,
-                }).collect();
+                let nodes: Vec<Node> = resp
+                    .nodes
+                    .into_iter()
+                    .map(|n| Node {
+                        id: n.id,
+                        name: n.name,
+                        address: n.address,
+                        status: n.status,
+                        role: n.role,
+                        last_heartbeat: n.last_heartbeat,
+                        health_score: n.trust_score,
+                    })
+                    .collect();
                 return Json(ApiResponse::success(nodes));
-            },
+            }
             Err(e) => {
                 tracing::warn!("Failed to fetch nodes from server: {}", e);
             }
@@ -45,14 +47,12 @@ pub async fn list_nodes(
 }
 
 // GET /nodes/stats
-pub async fn get_node_stats(
-    State(state): State<Arc<AppState>>,
-) -> Json<ApiResponse<NodeStats>> {
+pub async fn get_node_stats(State(state): State<Arc<AppState>>) -> Json<ApiResponse<NodeStats>> {
     let nodes = state.nodes.read().await;
     let total_count = nodes.len() as u32;
     let online_count = nodes.iter().filter(|n| n.status == "online").count() as u32;
     let offline_count = total_count - online_count;
-    
+
     // Mock latency calculation
     let average_latency = if total_count > 0 {
         nodes.iter().map(|_| 15.5).sum::<f64>() / total_count as f64
@@ -75,14 +75,17 @@ pub async fn get_all_nodes_health(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<Vec<serde_json::Value>>> {
     let nodes = state.nodes.read().await;
-    let health_data = nodes.iter().map(|n| {
-        serde_json::json!({
-            "id": n.id,
-            "status": n.status,
-            "health_score": n.health_score,
-            "last_heartbeat": n.last_heartbeat
+    let health_data = nodes
+        .iter()
+        .map(|n| {
+            serde_json::json!({
+                "id": n.id,
+                "status": n.status,
+                "health_score": n.health_score,
+                "last_heartbeat": n.last_heartbeat
+            })
         })
-    }).collect();
+        .collect();
     Json(ApiResponse::success(health_data))
 }
 
@@ -127,7 +130,7 @@ pub async fn register_node(
     Json(req): Json<NodeRegistrationRequest>,
 ) -> Json<ApiResponse<Node>> {
     let mut nodes = state.nodes.write().await;
-    
+
     let new_node = Node {
         id: uuid::Uuid::new_v4().to_string(),
         name: req.name,
@@ -137,7 +140,7 @@ pub async fn register_node(
         last_heartbeat: chrono::Utc::now().to_rfc3339(),
         health_score: 100.0,
     };
-    
+
     nodes.push(new_node.clone());
     Json(ApiResponse::success(new_node))
 }
@@ -171,7 +174,10 @@ pub async fn inject_fault(
         } else {
             node.health_score -= 20.0;
         }
-        Json(ApiResponse::success(format!("Fault injected: {}", config.fault_type)))
+        Json(ApiResponse::success(format!(
+            "Fault injected: {}",
+            config.fault_type
+        )))
     } else {
         Json(ApiResponse::error(404, "Node not found"))
     }

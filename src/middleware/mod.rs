@@ -1,14 +1,17 @@
+use crate::utils::auth::verify_token;
 use axum::{
     extract::Request,
+    http::{header, StatusCode},
     middleware::Next,
     response::Response,
-    http::{header, StatusCode},
 };
 use tower_http::request_id::RequestId;
-use crate::utils::auth::verify_token;
 
 pub async fn propagate_request_id(request: Request, next: Next) -> Response {
-    let request_id = request.extensions().get::<RequestId>().map(|id| id.header_value().clone());
+    let request_id = request
+        .extensions()
+        .get::<RequestId>()
+        .map(|id| id.header_value().clone());
     let mut response = next.run(request).await;
     if let Some(request_id) = request_id {
         response.headers_mut().insert("x-request-id", request_id);
@@ -31,7 +34,8 @@ pub async fn logging_middleware(request: Request, next: Next) -> Response {
 }
 
 pub async fn auth_middleware(mut request: Request, next: Next) -> Result<Response, StatusCode> {
-    let auth_header = request.headers()
+    let auth_header = request
+        .headers()
         .get(header::AUTHORIZATION)
         .and_then(|header| header.to_str().ok());
 

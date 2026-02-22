@@ -1,14 +1,19 @@
-use cosmos_sdk_proto::cosmos::tx::v1beta1::service_client::ServiceClient as TxServiceClient;
 use cosmos_sdk_proto::cosmos::base::tendermint::v1beta1::service_client::ServiceClient as TmServiceClient;
-use cosmos_sdk_proto::cosmos::tx::v1beta1::{BroadcastTxRequest, BroadcastTxResponse, BroadcastMode};
-use cosmos_sdk_proto::cosmos::base::tendermint::v1beta1::{GetBlockByHeightRequest, GetBlockByHeightResponse, GetLatestBlockRequest, GetLatestBlockResponse};
+use cosmos_sdk_proto::cosmos::base::tendermint::v1beta1::{
+    GetBlockByHeightRequest, GetBlockByHeightResponse, GetLatestBlockRequest,
+    GetLatestBlockResponse,
+};
+use cosmos_sdk_proto::cosmos::tx::v1beta1::service_client::ServiceClient as TxServiceClient;
+use cosmos_sdk_proto::cosmos::tx::v1beta1::{
+    BroadcastMode, BroadcastTxRequest, BroadcastTxResponse,
+};
 
-use tonic::transport::Channel;
-use tonic::transport::Endpoint;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use tonic::transport::Channel;
+use tonic::transport::Endpoint;
 
 #[derive(Clone)]
 pub struct ConsensusClient {
@@ -18,27 +23,32 @@ pub struct ConsensusClient {
 }
 
 impl ConsensusClient {
-    pub async fn connect(endpoint: String, healthy: Arc<AtomicBool>) -> Result<Self, tonic::transport::Error> {
+    pub async fn connect(
+        endpoint: String,
+        healthy: Arc<AtomicBool>,
+    ) -> Result<Self, tonic::transport::Error> {
         // Ensure endpoint has http scheme if missing, though Endpoint::from_shared usually handles it.
         // Cosmos gRPC usually requires http2.
         let channel = Endpoint::from_shared(endpoint)?
             .connect_timeout(Duration::from_secs(5))
             .connect()
             .await?;
-        
-        let tx_client = TxServiceClient::new(channel.clone())
-            .max_decoding_message_size(16 * 1024 * 1024);
-        let tm_client = TmServiceClient::new(channel)
-            .max_decoding_message_size(16 * 1024 * 1024);
-            
-        Ok(Self { 
-            tx_client, 
-            tm_client, 
-            healthy 
+
+        let tx_client =
+            TxServiceClient::new(channel.clone()).max_decoding_message_size(16 * 1024 * 1024);
+        let tm_client = TmServiceClient::new(channel).max_decoding_message_size(16 * 1024 * 1024);
+
+        Ok(Self {
+            tx_client,
+            tm_client,
+            healthy,
         })
     }
 
-    pub async fn broadcast_tx(&mut self, tx_bytes: Vec<u8>) -> Result<BroadcastTxResponse, tonic::Status> {
+    pub async fn broadcast_tx(
+        &mut self,
+        tx_bytes: Vec<u8>,
+    ) -> Result<BroadcastTxResponse, tonic::Status> {
         let mut retries = 0;
         let max_retries = 3;
         let mut backoff = Duration::from_millis(500);
@@ -48,14 +58,17 @@ impl ConsensusClient {
                 tx_bytes: tx_bytes.clone(),
                 mode: BroadcastMode::Sync as i32,
             };
-            
+
             match self.tx_client.broadcast_tx(req).await {
                 Ok(resp) => {
                     self.healthy.store(true, Ordering::SeqCst);
                     return Ok(resp.into_inner());
                 }
                 Err(status) => {
-                    if (status.code() == tonic::Code::Unavailable || status.code() == tonic::Code::Unknown) && retries < max_retries {
+                    if (status.code() == tonic::Code::Unavailable
+                        || status.code() == tonic::Code::Unknown)
+                        && retries < max_retries
+                    {
                         retries += 1;
                         sleep(backoff).await;
                         backoff *= 2;
@@ -70,13 +83,22 @@ impl ConsensusClient {
         }
     }
 
-    pub async fn get_block(&mut self, height: i64) -> Result<GetBlockByHeightResponse, tonic::Status> {
+    pub async fn get_block(
+        &mut self,
+        height: i64,
+    ) -> Result<GetBlockByHeightResponse, tonic::Status> {
         let req = GetBlockByHeightRequest { height };
-        self.tm_client.get_block_by_height(req).await.map(|r| r.into_inner())
+        self.tm_client
+            .get_block_by_height(req)
+            .await
+            .map(|r| r.into_inner())
     }
 
     pub async fn get_latest_block(&mut self) -> Result<GetLatestBlockResponse, tonic::Status> {
         let req = GetLatestBlockRequest {};
-        self.tm_client.get_latest_block(req).await.map(|r| r.into_inner())
+        self.tm_client
+            .get_latest_block(req)
+            .await
+            .map(|r| r.into_inner())
     }
 }

@@ -1,9 +1,12 @@
-use crate::models::{ApiResponse, PerformanceMetrics, HistoryQueryParams};
 use crate::common::state::AppState;
+use crate::models::{ApiResponse, HistoryQueryParams, PerformanceMetrics};
 use axum::{
-    extract::{Query, State, ws::{WebSocketUpgrade, WebSocket, Message}},
-    Json,
+    extract::{
+        ws::{Message, WebSocket, WebSocketUpgrade},
+        Query, State,
+    },
     response::IntoResponse,
+    Json,
 };
 use std::sync::Arc;
 use tokio::time::Duration;
@@ -45,26 +48,24 @@ pub async fn get_summary(
 ) -> Json<ApiResponse<serde_json::Value>> {
     let history = state.performance_history.read().await;
     let count = history.len() as f64;
-    
+
     let avg_tps = if count > 0.0 {
         history.iter().map(|m| m.throughput).sum::<f64>() / count
     } else {
         0.0
     };
-    
+
     let summary = serde_json::json!({
         "average_tps": avg_tps,
         "max_tps": history.iter().map(|m| m.throughput).fold(0.0, f64::max),
         "total_samples": count
     });
-    
+
     Json(ApiResponse::success(summary))
 }
 
 // POST /performance/clear
-pub async fn clear_data(
-    State(state): State<Arc<AppState>>,
-) -> Json<ApiResponse<String>> {
+pub async fn clear_data(State(state): State<Arc<AppState>>) -> Json<ApiResponse<String>> {
     let mut history = state.performance_history.write().await;
     history.clear();
     Json(ApiResponse::success("Performance data cleared".to_string()))
@@ -133,10 +134,10 @@ pub async fn ws_handler(
 
 async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     let mut interval = tokio::time::interval(Duration::from_secs(1));
-    
+
     loop {
         interval.tick().await;
-        
+
         let latest = {
             let history = state.performance_history.read().await;
             history.last().cloned()

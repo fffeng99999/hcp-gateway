@@ -1,5 +1,5 @@
-use crate::models::{ApiResponse, AntiManipulationConfig, ManipulationEvent};
 use crate::common::state::AppState;
+use crate::models::{AntiManipulationConfig, ApiResponse, ManipulationEvent};
 use axum::{
     extract::{Path, State},
     Json,

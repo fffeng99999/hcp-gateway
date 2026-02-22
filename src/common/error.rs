@@ -1,9 +1,9 @@
+use crate::models::ApiResponse;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
-use crate::models::ApiResponse;
 use validator::ValidationErrors;
 
 #[derive(Debug)]
@@ -25,9 +25,9 @@ impl IntoResponse for AppError {
             AppError::ServiceUnavailable(msg) => (StatusCode::SERVICE_UNAVAILABLE, 503, msg),
             AppError::AuthError(msg) => (StatusCode::UNAUTHORIZED, 401, msg),
             AppError::ValidationError(errs) => (
-                StatusCode::BAD_REQUEST, 
-                400, 
-                format!("Validation error: {}", errs)
+                StatusCode::BAD_REQUEST,
+                400,
+                format!("Validation error: {}", errs),
             ),
         };
 

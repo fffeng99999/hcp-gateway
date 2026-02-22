@@ -1,10 +1,10 @@
-use crate::models::{ApiResponse, AnalysisReport, GenerateReportRequest, TrendData, ExportParams};
 use crate::common::state::AppState;
+use crate::models::{AnalysisReport, ApiResponse, ExportParams, GenerateReportRequest, TrendData};
 use axum::{
     extract::{Path, Query, State},
+    http::header,
     response::{IntoResponse, Response},
     Json,
-    http::header,
 };
 use std::sync::Arc;
 
@@ -13,20 +13,21 @@ pub async fn get_summary(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<serde_json::Value>> {
     let benchmarks = state.benchmarks.read().await;
-    
+
     // Simple mock analysis
     let total_benchmarks = benchmarks.len();
-    let best_performance = benchmarks.iter()
+    let best_performance = benchmarks
+        .iter()
         .map(|b| b.metrics.throughput)
         .fold(0.0, f64::max);
-        
+
     let summary = serde_json::json!({
         "total_benchmarks_run": total_benchmarks,
         "highest_throughput_achieved": best_performance,
         "most_used_algorithm": "tPBFT",
         "system_stability_score": 95.5
     });
-    
+
     Json(ApiResponse::success(summary))
 }
 
@@ -56,19 +57,28 @@ pub async fn get_comparison(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<serde_json::Value>> {
     let benchmarks = state.benchmarks.read().await;
-    
+
     // Group by algorithm
     let mut comparison = serde_json::Map::new();
-    
+
     // Mock comparison data if no benchmarks
     if benchmarks.is_empty() {
-        comparison.insert("tPBFT".to_string(), serde_json::json!({"avg_tps": 5000.0, "avg_latency": 150.0}));
-        comparison.insert("HotStuff".to_string(), serde_json::json!({"avg_tps": 4500.0, "avg_latency": 180.0}));
+        comparison.insert(
+            "tPBFT".to_string(),
+            serde_json::json!({"avg_tps": 5000.0, "avg_latency": 150.0}),
+        );
+        comparison.insert(
+            "HotStuff".to_string(),
+            serde_json::json!({"avg_tps": 4500.0, "avg_latency": 180.0}),
+        );
     } else {
         // Real aggregation logic would go here
-        comparison.insert("tPBFT".to_string(), serde_json::json!({"avg_tps": 5200.0, "avg_latency": 140.0}));
+        comparison.insert(
+            "tPBFT".to_string(),
+            serde_json::json!({"avg_tps": 5200.0, "avg_latency": 140.0}),
+        );
     }
-    
+
     Json(ApiResponse::success(serde_json::Value::Object(comparison)))
 }
 
@@ -86,7 +96,7 @@ pub async fn get_algo_limits(
         "achieved_latency_min": 120.0,
         "bottleneck": "Network Bandwidth"
     });
-    
+
     Json(ApiResponse::success(limits))
 }
 
@@ -97,14 +107,14 @@ pub async fn get_trends(
 ) -> Json<ApiResponse<Vec<TrendData>>> {
     // Mock trend data
     let now = chrono::Utc::now();
-    let trends = (0..10).map(|i| {
-        TrendData {
+    let trends = (0..10)
+        .map(|i| TrendData {
             timestamp: (now - chrono::Duration::minutes(i * 10)).to_rfc3339(),
             metric: "throughput".to_string(),
             value: 4000.0 + (i as f64) * 100.0,
-        }
-    }).collect();
-    
+        })
+        .collect();
+
     Json(ApiResponse::success(trends))
 }
 
@@ -115,14 +125,18 @@ pub async fn generate_report(
 ) -> Response {
     let content = format!("REPORT: {}\n\n{}", req.title, req.content);
     let filename = format!("report_{}.txt", chrono::Utc::now().timestamp());
-    
+
     (
         [
             (header::CONTENT_TYPE, "text/plain"),
-            (header::CONTENT_DISPOSITION, &format!("attachment; filename=\"{}\"", filename)),
+            (
+                header::CONTENT_DISPOSITION,
+                &format!("attachment; filename=\"{}\"", filename),
+            ),
         ],
         content,
-    ).into_response()
+    )
+        .into_response()
 }
 
 // POST /analysis/export
@@ -132,12 +146,16 @@ pub async fn export_analysis(
 ) -> Response {
     let content = "analysis_id,metric,value\n1,tps,5000\n2,latency,150";
     let filename = format!("analysis_export.{}", params.format);
-    
+
     (
         [
             (header::CONTENT_TYPE, "text/csv"),
-            (header::CONTENT_DISPOSITION, &format!("attachment; filename=\"{}\"", filename)),
+            (
+                header::CONTENT_DISPOSITION,
+                &format!("attachment; filename=\"{}\"", filename),
+            ),
         ],
         content,
-    ).into_response()
+    )
+        .into_response()
 }
