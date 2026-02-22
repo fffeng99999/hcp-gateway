@@ -332,14 +332,18 @@ impl AppState {
 
     fn default_storage_settings() -> StorageSettings {
         StorageSettings {
-            data_path: "./data".to_string(),
+            blockchain_data_path: "./data".to_string(),
             log_path: "./logs".to_string(),
-            db_type: "leveldb".to_string(),
+            report_data_path: "./reports".to_string(),
+            backend_db_type: "PostgreSQL".to_string(),
+            blockchain_db_type: "LevelDB".to_string(),
             cache_size: 1024,
             compression: true,
             compression_algo: "snappy".to_string(),
             auto_archive: false,
             archive_threshold: 30,
+            storage_used: None,
+            storage_total: None,
         }
     }
 

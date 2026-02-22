@@ -303,14 +303,20 @@ pub struct NetworkSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StorageSettings {
-    pub data_path: String,
+    pub blockchain_data_path: String,
     pub log_path: String,
-    pub db_type: String,
+    pub report_data_path: String,
+    pub backend_db_type: String,
+    pub blockchain_db_type: String,
     pub cache_size: u32,
     pub compression: bool,
     pub compression_algo: String,
     pub auto_archive: bool,
     pub archive_threshold: u32,
+    #[serde(skip_deserializing)]
+    pub storage_used: Option<u64>,
+    #[serde(skip_deserializing)]
+    pub storage_total: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
