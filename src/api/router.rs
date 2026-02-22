@@ -139,12 +139,12 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
                     get(api::settings::get_storage).put(api::settings::update_storage),
                 )
                 .route(
-                    "/security",
-                    get(api::settings::get_security).put(api::settings::update_security),
+                    "/storage/validatePath",
+                    get(api::settings::validate_storage_path),
                 )
                 .route(
-                    "/notifications",
-                    get(api::settings::get_notifications).put(api::settings::update_notifications),
+                    "/security",
+                    get(api::settings::get_security).put(api::settings::update_security),
                 )
                 .route(
                     "/notification",
@@ -154,7 +154,10 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
                     "/backup",
                     get(api::settings::get_backup).put(api::settings::update_backup),
                 )
+                .route("/backups", get(api::settings::get_backups))
+                .route("/backups/:id", delete(api::settings::delete_backup))
                 .route("/backup/trigger", post(api::settings::trigger_backup))
+                .route("/backup/restore/:id", post(api::settings::restore_backup))
                 .route(
                     "/backup/validate-path",
                     post(api::settings::validate_backup_path),
@@ -166,7 +169,13 @@ pub fn create_router(app_state: Arc<state::AppState>) -> Router {
                 .route(
                     "/users/:id",
                     put(api::settings::update_user).delete(api::settings::delete_user),
-                ),
+                )
+                .route(
+                    "/users/:id/reset-password",
+                    post(api::settings::reset_user_password),
+                )
+                .route("/user/validate", post(api::settings::validate_user))
+                .route("/system", get(api::settings::get_system_info)),
         )
         .layer(from_fn(middleware::auth_middleware));
 

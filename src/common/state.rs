@@ -5,6 +5,7 @@ use crate::utils::mock_data::MockData;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::sync::RwLock;
 
 #[derive(Clone)]
@@ -46,8 +47,37 @@ pub struct AppState {
     pub backup_settings: Arc<RwLock<BackupSettings>>,
     pub users: Arc<RwLock<Vec<SystemUser>>>,
     pub backups: Arc<RwLock<Vec<BackupRecord>>>,
+    pub general_cache: Arc<RwLock<SettingsCache<GeneralSettings>>>,
+    pub network_cache: Arc<RwLock<SettingsCache<NetworkSettings>>>,
+    pub storage_cache: Arc<RwLock<SettingsCache<StorageSettings>>>,
+    pub security_cache: Arc<RwLock<SettingsCache<SecuritySettings>>>,
+    pub notification_cache: Arc<RwLock<SettingsCache<NotificationSettings>>>,
+    pub backup_cache: Arc<RwLock<SettingsCache<BackupSettings>>>,
+    pub users_cache: Arc<RwLock<SettingsCache<Vec<SystemUser>>>>,
+    pub backups_cache: Arc<RwLock<SettingsCache<Vec<BackupRecord>>>>,
     // 全局配置版本号，所有设置写操作会自增
     pub config_version: Arc<AtomicU64>,
+}
+
+#[derive(Clone)]
+pub struct SettingsCache<T> {
+    pub value: Option<T>,
+    pub updated_at: Option<Instant>,
+}
+
+impl<T> SettingsCache<T> {
+    pub fn new() -> Self {
+        Self {
+            value: None,
+            updated_at: None,
+        }
+    }
+}
+
+impl<T> Default for SettingsCache<T> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AppState {
@@ -165,6 +195,14 @@ impl AppState {
             backup_settings: Arc::new(RwLock::new(Self::default_backup_settings())),
             users: Arc::new(RwLock::new(Self::default_users())),
             backups: Arc::new(RwLock::new(Vec::new())),
+            general_cache: Arc::new(RwLock::new(SettingsCache::new())),
+            network_cache: Arc::new(RwLock::new(SettingsCache::new())),
+            storage_cache: Arc::new(RwLock::new(SettingsCache::new())),
+            security_cache: Arc::new(RwLock::new(SettingsCache::new())),
+            notification_cache: Arc::new(RwLock::new(SettingsCache::new())),
+            backup_cache: Arc::new(RwLock::new(SettingsCache::new())),
+            users_cache: Arc::new(RwLock::new(SettingsCache::new())),
+            backups_cache: Arc::new(RwLock::new(SettingsCache::new())),
             config_version: Arc::new(AtomicU64::new(1)),
         }
     }

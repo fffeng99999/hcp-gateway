@@ -7,6 +7,7 @@ use validator::Validate;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiResponse<T> {
     pub code: i32,
+    #[serde(rename = "msg", alias = "message")]
     pub message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<T>,
@@ -17,7 +18,7 @@ impl<T> ApiResponse<T> {
     pub fn success(data: T) -> Self {
         ApiResponse {
             code: 0,
-            message: "success".to_string(),
+            message: "ok".to_string(),
             data: Some(data),
             timestamp: chrono::Utc::now().to_rfc3339(),
         }

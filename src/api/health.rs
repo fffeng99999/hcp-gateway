@@ -44,7 +44,7 @@ pub async fn health_check(State(state): State<Arc<AppState>>) -> impl IntoRespon
 pub async fn system_stream(
     State(state): State<Arc<AppState>>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    let interval = IntervalStream::new(tokio::time::interval(Duration::from_secs(2)));
+    let interval = IntervalStream::new(tokio::time::interval(Duration::from_secs(1)));
 
     let stream = interval.map(move |_| {
         let consensus_healthy = state.consensus_healthy.load(Ordering::SeqCst);

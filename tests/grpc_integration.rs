@@ -12,11 +12,11 @@ async fn test_grpc_integration() {
     // 1. 启动 hcp-server 的 Docker 容器
     println!("Starting hcp-server container...");
     let _ = Command::new("docker")
-        .args(&["rm", "-f", "hcp-server-test"])
+        .args(["rm", "-f", "hcp-server-test"])
         .status();
 
     let status = Command::new("docker")
-        .args(&[
+        .args([
             "run",
             "-d",
             "-p",
@@ -55,7 +55,7 @@ async fn test_grpc_integration() {
     if client.is_none() {
         // 清理容器并终止测试
         let _ = Command::new("docker")
-            .args(&["rm", "-f", "hcp-server-test"])
+            .args(["rm", "-f", "hcp-server-test"])
             .status();
         panic!("Failed to connect to hcp-server");
     }
@@ -144,6 +144,6 @@ async fn test_grpc_integration() {
 
     // 5. 清理测试使用的 Docker 容器
     let _ = Command::new("docker")
-        .args(&["rm", "-f", "hcp-server-test"])
+        .args(["rm", "-f", "hcp-server-test"])
         .status();
 }
