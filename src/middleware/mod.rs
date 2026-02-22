@@ -47,17 +47,6 @@ pub async fn auth_middleware(mut request: Request, next: Next) -> Result<Respons
 
     let token = &auth_header[7..];
 
-    // Compatibility for frontend mock token
-    if token.starts_with("mock_token_") {
-        let claims = crate::models::Claims {
-            sub: "admin".to_string(),
-            role: "admin".to_string(),
-            exp: usize::MAX,
-        };
-        request.extensions_mut().insert(claims);
-        return Ok(next.run(request).await);
-    }
-
     match verify_token(token) {
         Ok(claims) => {
             request.extensions_mut().insert(claims);
